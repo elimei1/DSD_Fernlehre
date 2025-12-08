@@ -1,19 +1,34 @@
 def load_peer_config(filepath):
     """
-    Liest die Liste aller Peers ein[cite: 9].
+    Format: ID IP PORT
+    Example: 1 127.0.0.1 5001
     """
     peers = []
-    # TODO: Öffne die Datei im Pfad 'filepath'.
-    # TODO: Parse jede Zeile (Format z.B.: ID IP PORT).
-    # TODO: Speichere die Daten in einer Liste von Dictionaries oder Tupeln.
-    # TODO: Rückgabe der Liste.
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip().startswith('#'):
+                    continue
+                    
+                parts = line.split()
+                if len(parts) >= 3:
+                    try:
+                        peer_id = int(parts[0])
+                        peer_ip = parts[1]
+                        peer_port = int(parts[2])
+                        peers.append({'id': peer_id, 'ip': peer_ip, 'port': peer_port})
+                    except ValueError:
+                        print(f"Warning: Invalid format in line: {line.strip()}")
+    except FileNotFoundError:
+        print(f"Error: Configuration file '{filepath}' not found.")
+    
     return peers
 
 def log_message(filepath, sender_id, msg_id, payload):
     """
-    Speichert empfangene Nachrichten in einer Datei[cite: 43].
+    Saves received messages to a file[cite: 43].
     """
-    # TODO: Öffne die Log-Datei im Append-Modus ('a').
-    # TODO: Schreibe Zeitstempel, Sender-ID, Message-ID und den Text-Payload hinein.
-    # TODO: Flushe oder schließe die Datei, um Datenverlust zu vermeiden.
+    # TODO: Open log file in append mode ('a').
+    # TODO: Write timestamp, sender ID, message ID, and text payload.
+    # TODO: Flush or close the file to prevent data loss.
     pass
