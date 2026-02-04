@@ -4,7 +4,26 @@ import struct
 class Packet:
     # definition of struct
     # ! = Network Endian, B=unsigned char, I=unsigned int, H=unsigned short
-    HEADER_FORMAT = "!BIHB" 
+
+    """
+        Represents a packet in the Reliable Group Communication protocol.
+
+        Structure:
+        [ Fixed Header (8 bytes) ] [ Variable Header (SenderID) ] [ Payload ]
+
+        Fixed Header Format (!BIHB):
+        - PacketType (1 byte, unsigned char): 0=ACK, 1=DATA
+        - SequenceNumber (4 bytes, unsigned int)
+        - Checksum (2 bytes, unsigned short): Covers the entire packet (Header + SenderID + Payload)
+        - SenderID Length (1 byte, unsigned char): Length of the following SenderID in bytes
+
+        Variable Header:
+        - SenderID (Variable length, encoded as UTF-8 bytes): Not part of the fixed header struct.
+
+        Payload:
+        - Variable length bytes: The actual message content.
+    """
+    HEADER_FORMAT = "!BIHB"
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT) # equals 8 Bytes
 
     # constant for the type
