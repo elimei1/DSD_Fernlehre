@@ -27,8 +27,6 @@ class Packet:
         Payload:
         - Variable length bytes: The actual message content.
     """
-    HEADER_FORMAT = "!BIHB"
-    HEADER_SIZE = struct.calcsize(HEADER_FORMAT) # equals 8 Bytes
 
     # 1. mark constants as ClassVar (they are ignored by the constructor)
     HEADER_FORMAT: ClassVar[str] = "!BIHB"
