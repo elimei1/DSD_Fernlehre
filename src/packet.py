@@ -40,7 +40,7 @@ class Packet:
     payload: str = ""
     checksum: int = 0
 
-    def isAck(self):
+    def setAck(self):
         self.packetType = self.ACK_TYPE
         return self
 
@@ -75,12 +75,11 @@ class Packet:
         return self
 
     def getHeaderMap(self):
-        header = {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
+        return {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
                   "SenderID_length": self.senderID_length, "SenderID": self.sender_id}
-        return header
 
     def getHeaderStruct(self):
-        header = struct.pack(
+        return struct.pack(
             self.HEADER_FORMAT,
             self.packetType,
             self.sequence_number,
@@ -122,13 +121,11 @@ class Packet:
         sid_end: int = sid_start + sid_len
 
         # 5. create new object
-        packet = Packet().setPayload(data_bytes[sid_end:]).setChecksum(received_checksum).setSenderID(data_bytes[sid_start:sid_end]).setSequenceNumber(seq_num)
+        packet = Packet().setChecksum(received_checksum).setSenderID(data_bytes[sid_start:sid_end]).setSequenceNumber(seq_num)
+        if p_type == Packet.ACK_TYPE:
+            packet.setAck()
+        else:
+            packet.setPayload(data_bytes[sid_end:])
 
         return packet
-
-    @staticmethod
-    def calculate_checksum(data_bytes):
-        return 0
-
-
 
