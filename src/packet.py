@@ -34,8 +34,9 @@ class Packet:
     DATA_TYPE: ClassVar[int] = 1
 
     sender_id: str = ""
+    senderID_length: int = -1
     sequence_number: int = 0
-    packetType: bool = -1
+    packetType: int = -1
     payload: str = ""
     checksum: int = 0
 
@@ -43,13 +44,17 @@ class Packet:
         self.packetType = self.ACK_TYPE
         return self
 
-    def isData(self):
-        self.packetType = self.DATA_TYPE
-        return self
-
     def setSenderID(self, sender_id):
-        self.sender_id = sender_id
-        self.senderID_length = len(sender_id)
+        # set sender id
+        if isinstance(sender_id, bytes):
+            self.sender_id = sender_id.decode("utf-8")
+        else:
+            self.sender_id = sender_id
+
+        # set senderId length
+        if len(self.sender_id) > 255:
+            raise ValueError("Sender ID too long (max 255 bytes)")
+        self.senderID_length = len(self.sender_id)
         return self
 
     def setSequenceNumber(self, sequence_number):
@@ -61,10 +66,12 @@ class Packet:
         return self
 
     def setPayload(self, payload):
-        if (isinstance(payload, bytes)):
+        if isinstance(payload, bytes):
             self.payload = payload.decode("utf-8")
         else:
             self.payload = payload
+
+        self.packetType = self.DATA_TYPE
         return self
 
     def getHeaderMap(self):
@@ -72,27 +79,20 @@ class Packet:
                   "SenderID_length": self.senderID_length, "SenderID": self.sender_id}
         return header
 
+    def getHeaderStruct(self):
+        header = struct.pack(
+            self.HEADER_FORMAT,
+            self.packetType,
+            self.sequence_number,
+            self.checksum,
+            self.senderID_length,
+        )
+
     def to_bytes(self):
         """
         converts the object in a byte array (serialize)
         """
-        # 1. convert Sender ID to Bytesj
-        # we need that to calc the lenght of the header
-        sid_bytes: bytes = str(self.sender_id).encode("utf-8")
-        sid_len: int = len(sid_bytes)
-
-        # security check: Does the ID fit 1Byte (max 255)
-        if sid_len > 255:
-            raise ValueError("Sender ID too long (max 255 bytes)")
-
-        # 3. create header
-        # structure: Type, SeqNum, Checksum, ID_Length
-        header: bytes = struct.pack(
-            self.HEADER_FORMAT, self.packetType, self.sequence_number, self.checksum, sid_len
-        )
-
-        # 4. return fully assembled packet
-        return header + sid_bytes + self.payload
+        return self.getHeaderStruct() + self.sender_id.encode('utf-8') + self.payload.encode('utf-8')
 
     @classmethod
     def from_bytes(cls, data_bytes):
@@ -120,16 +120,15 @@ class Packet:
         # ID start is directly after header
         sid_start: int = cls.HEADER_SIZE
         sid_end: int = sid_start + sid_len
-        sender_id: str = data_bytes[sid_start:sid_end].decode("utf-8")
 
         # 5. create new object
-        packet = Packet().setPayload(data_bytes[sid_end:]).setChecksum(received_checksum).setSenderID(sender_id).setSequenceNumber(seq_num)
-        is_ack = (p_type == cls.ACK_TYPE)
-        packet.isAck() if (p_type == cls.ACK_TYPE) else packet.isData()
+        packet = Packet().setPayload(data_bytes[sid_end:]).setChecksum(received_checksum).setSenderID(data_bytes[sid_start:sid_end]).setSequenceNumber(seq_num)
 
         return packet
 
     @staticmethod
     def calculate_checksum(data_bytes):
-
         return 0
+
+
+
