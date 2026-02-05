@@ -1,6 +1,7 @@
 import struct
 from dataclasses import dataclass
 from typing import ClassVar, Union
+import checksum as cs
 
 
 @dataclass
@@ -89,9 +90,26 @@ class Packet:
 
     def to_bytes(self):
         """
-        converts the object in a byte array (serialize)
+        Converts the object into a byte array and automatically 
+        calculates the RFC 1071 checksum.
         """
-        return self.getHeaderStruct() + self.sender_id.encode('utf-8') + self.payload.encode('utf-8')
+        
+        sid_bytes = self.sender_id.encode('utf-8')
+        # check that payload is bytes
+        p_bytes = self.payload.encode('utf-8') if isinstance(self.payload, str) else self.payload
+
+        # set checksum to 0 for calc
+        self.checksum = 0
+        
+        # temp paket (header with checksum 0 + remainer)
+        temp_header = self.getHeaderStruct()
+        temp_packet = temp_header + sid_bytes + p_bytes
+        
+        # calc checksum an store in object
+        self.checksum = cs.internet_checksum(temp_packet)
+        
+        # return final paket with set checksum
+        return self.getHeaderStruct() + sid_bytes + p_bytes
 
     @classmethod
     def from_bytes(cls, data_bytes):
