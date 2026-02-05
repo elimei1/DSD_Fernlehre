@@ -4,6 +4,7 @@ import time
 import queue
 
 from src.OutboundPacket import OutboundPacket
+from src.ThreadHandler import ThreadHandler
 from src.packet import Packet
 from src.SeqNumGenerator import SeqNumGenerator
 from src.Transaction import Transaction
@@ -23,23 +24,32 @@ class PeerMiddleware:
         self.sock.bind(('', my_port))
         self.sock.settimeout(PeerMiddleware.TIMEOUT_TIME)
 
-        self.seqNumGenerator = SeqNumGenerator()
+        print(self.peers)
+
+        for peer in self.peers:
+            peer["seqNumber"] = SeqNumGenerator
+
         self.deliveryQueue = queue.Queue() # for messages received
         self.outboundPacketQueue = queue.Queue() # for messages to be sent
         self.preProcessingQueue = queue.Queue()
         self.transactionList = []
+
         self.reaper_sleep_time = 50
         self.running = True
+
+        self.threadhandler = ThreadHandler(self)
         
         # Events für Stop-and-Wait Synchronisation
-        self.ack_received_event = threading.Event()
 
 
     def start(self):
         """
         Startet den Listener-Thread für eingehende Nachrichten.
         """
-        self.sender_threads.append(threading.Thread(target=self._sender_thread))
+        self.threadhandler.startSenderThread()
+        self.threadhandler.startReceiverThread()
+        self.threadhandler.startReceiverThread()
+        self.threadhandler.startPreProcessingThread()
 
     def message_prepare_thread(self):
         while self.running:
