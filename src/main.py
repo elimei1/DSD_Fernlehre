@@ -1,6 +1,11 @@
-import sys
 import argparse
-from utils import load_peer_config, log_message
+import sys
+
+from middleware import PeerMiddleware
+from ThreadHandler import ThreadHandler
+from tui import PeerTUI  # Importiere deine neue TUI-Klasse
+from utils import load_peer_config
+
 
 def print_banner():
     print(r"""
@@ -13,128 +18,70 @@ def print_banner():
     print("Distributed Systems Dependability - Fernlehre")
     print("-" * 50)
 
+
 def main():
-    # Argument Parsing
+    # 1. Argument Parsing (Bleibt in main.py)
     parser = argparse.ArgumentParser(description="P2P Chat with Error Injection")
-    
     parser.add_argument("--id", type=int, required=False, help="Peer ID")
     parser.add_argument("--port", type=int, required=False, help="Own Port")
     parser.add_argument("--peers", type=str, required=False, help="Path to config file")
     parser.add_argument("--log", type=str, required=False, help="Path to log file")
-    parser.add_argument("--error_msg_id", type=int, default=None, help="Optional: ID for error injection")
-    parser.add_argument("--error_bit_idx", type=int, default=None, help="Optional: Bit index for error")
-    
-    args = parser.parse_args()
+    parser.add_argument(
+        "--error_msg_id", type=int, default=None, help="ID for error injection"
+    )
+    parser.add_argument(
+        "--error_bit_idx", type=int, default=None, help="Bit index for error"
+    )
 
-    # Setup
+    args = parser.parse_args()
     print_banner()
-    
-    peers = []
+
     mw = None
-    
-    # enough arguments to auto-start
+    handler = None
+
+    # 2. Initialisierung der Middleware
     if args.id and args.port and args.peers and args.log:
-        print(f"Peer ID: {args.id}")
-        print(f"Port: {args.port}")
-        if args.error_msg_id is not None:
-            print(f"Error Injection: MsgID={args.error_msg_id}, BitIdx={args.error_bit_idx}")
-        else:
-            print("Error Injection: Disabled")
-        
         peers = load_peer_config(args.peers)
-        print(f"Loaded {len(peers)} peers from {args.peers}")
-        
+        error_config = (
+            (args.error_msg_id, args.error_bit_idx)
+            if args.error_msg_id is not None
+            else None
+        )
+
         try:
-            mw = PeerMiddleware(args.id, args.port, peers, (args.error_msg_id, args.error_bit_idx))
-            # mw.start()
-            print("Middleware initialized.")
+            # Middleware-Instanz erstellen
+            mw = PeerMiddleware(args.id, args.port, peers, error_config)
+
+            # Hintergrund-Threads über den ThreadHandler starten
+            handler = ThreadHandler(mw)
+            handler.startReceiverThread()
+            handler.startSenderThread()
+            handler.startReaperThread()
+            # Falls vorhanden: handler.startPreProcessingThread()
+
+            print(f"Middleware for Peer {args.id} initialized and threads started.")
         except Exception as e:
             print(f"Failed to initialize Middleware: {e}")
-            mw = None
+            sys.exit(1)
     else:
-        print("Configuration missing. Use 'setup' command to configure.")
+        print(
+            "Configuration missing. Please start with all required arguments or use 'setup' in TUI."
+        )
 
-    print("-" * 50)
-    print("Commands: help, status, setup, exit, <message>")
-
-    # UI
+    # 3. Start der TUI (Ersetzt die alte while-Schleife)
     try:
-        while True:
-            current_id = args.id if args.id else "?"
-            try:
-                user_input = input(f"\nPeer {current_id} >> ")
-            except EOFError:
-                break
-            
-            cmd = user_input.strip().lower()
-            
-            if cmd == "exit":
-                break
-            elif cmd == "help":
-                print("Available commands:")
-                print("  help           - Show this help")
-                print("  setup          - Configure peer interactively")
-                print("  status         - Show current status and peers")
-                print("  exit    - Exit the application")
-                print("  <message>      - Send a message to all peers")
-            
-            elif cmd == "setup":
-                try:
-                    p_id = input("Enter Peer ID: ").strip()
-                    p_port = input("Enter Port: ").strip()
-                    p_peers = input("Enter Peers Config Path: ").strip()
-                    p_log = input("Enter Log File Path (default: logs.log): ").strip()
-                    if not p_log:
-                        p_log = "logs.log"
-                    
-                    if not (p_id and p_port and p_peers):
-                        print("ID, Port and Peers Config are required.")
-                        continue
-                        
-                    args.id = int(p_id)
-                    args.port = int(p_port)
-                    args.peers = p_peers
-                    args.log = p_log
-                    
-                    peers = load_peer_config(args.peers)
-                    print(f"Loaded {len(peers)} peers.")
-                    
-                    if mw:
-                        mw.stop()
-                    
-                    mw = PeerMiddleware(args.id, args.port, peers, None)
-                    # mw.start()
-                    print("Middleware initialized.")
-                    
-                except ValueError:
-                    print("Invalid input (ID/Port must be integers).")
-                except Exception as e:
-                    print(f"Setup failed: {e}")
-
-            elif cmd == "status":
-                print(f"ID={args.id}, Port={args.port}")
-                print(f"Peers: {len(peers)}")
-                for p in peers:
-                    print(f"  - ID: {p['id']}, IP: {p['ip']}, Port: {p['port']}")
-            elif cmd == "":
-                continue
-            else:
-                # message
-                if mw:
-                    print(f"Sending message to {len(peers)} peers: {user_input}")
-                    try:
-                        mw.send_multicast_message(user_input)
-                    except Exception as e:
-                        print(f"Error sending message: {e}")
-                else:
-                    print("Middleware not running. Run setup first.")
-            
+        # Wir übergeben das Middleware-Objekt an die TUI
+        tui = PeerTUI(mw, args)
+        tui.cmdloop()  # Startet die interaktive Shell
     except KeyboardInterrupt:
         print("\nExiting...")
     finally:
-        if mw:
-            mw.stop()
+        # 4. Cleanup
+        if handler:
+            print("Shutting down threads...")
+            handler.shutdown()
         print("Cleanup done.")
+
 
 if __name__ == "__main__":
     main()
