@@ -3,7 +3,7 @@ def load_peer_config(filepath):
     Format: ID IP PORT
     Example: 1 127.0.0.1 5001
     """
-    peers = []
+    peers = {}
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             for line in f:
@@ -16,7 +16,7 @@ def load_peer_config(filepath):
                         peer_id = int(parts[0])
                         peer_ip = parts[1]
                         peer_port = int(parts[2])
-                        peers.append({'id': peer_id, 'ip': peer_ip, 'port': peer_port})
+                        peers[peer_id] = [peer_ip, peer_port]
                     except ValueError:
                         print(f"Warning: Invalid format in line: {line.strip()}")
     except FileNotFoundError:

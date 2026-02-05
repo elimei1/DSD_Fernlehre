@@ -1,9 +1,18 @@
 import socket
 import threading
 import time
-from packet import Packet
+import queue
+
+from src.OutboundPacket import OutboundPacket
+from src.packet import Packet
+from src.SeqNumGenerator import SeqNumGenerator
+from src.Transaction import Transaction
 
 class PeerMiddleware:
+    TIMEOUT_TIME = 1.0
+    MAX_RETRIES = 4
+    RECV_BYTES = 4096
+
     def __init__(self, my_id, my_port, peer_list, error_config):
         self.my_id = my_id
         self.peers = peer_list # Liste aus utils.load_peer_config
@@ -12,83 +21,76 @@ class PeerMiddleware:
         # UDP Socket Setup [cite: 12, 32]
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', my_port))
-        
-        self.current_seq_num = 0
+        self.sock.settimeout(PeerMiddleware.TIMEOUT_TIME)
+
+        self.seqNumGenerator = SeqNumGenerator()
+        self.deliveryQueue = queue.Queue() # for messages received
+        self.outboundPacketQueue = queue.Queue() # for messages to be sent
+        self.preProcessingQueue = queue.Queue()
+        self.transactionList = []
+        self.reaper_sleep_time = 50
         self.running = True
         
         # Events für Stop-and-Wait Synchronisation
         self.ack_received_event = threading.Event()
 
+
     def start(self):
         """
         Startet den Listener-Thread für eingehende Nachrichten.
         """
-        # TODO: Erstelle einen threading.Thread mit target=self._listen_loop.
-        # TODO: Starte den Thread als Daemon.
-        pass
+        self.sender_threads.append(threading.Thread(target=self._sender_thread))
 
-    def send_multicast_message(self, text_payload):
-        """
-        Iterative Multicast Emulation[cite: 54].
-        Wird vom UI (Main Thread) aufgerufen.
-        """
-        # TODO: Erhöhe self.current_seq_num für die neue Nachricht[cite: 30].
-        # TODO: Erstelle das Packet-Objekt mit Payload und Header.
-        # TODO: Berechne die Checksumme und setze sie im Paket.
-        
-        # Iteration über alle bekannten Peers (außer sich selbst, falls gewünscht, aber PDF sagt Closed Group [cite: 6])
-        for peer in self.peers:
-            # TODO: Rufe self._send_stop_and_wait(peer, packet) auf.
-            
-            # WICHTIG: Wartezeit zwischen den Peers einhalten [cite: 56]
-            time.sleep(1.0) 
+    def message_prepare_thread(self):
+        while self.running:
+            packet = self.preProcessingQueue.get(timeout=PeerMiddleware.TIMEOUT_TIME)
+            for peer in self.peers:
+                self.outboundPacketQueue.put(OutboundPacket(packet, peer))
+            self.preProcessingQueue.task_done()
 
-    def _send_stop_and_wait(self, peer, packet):
-        """
-        Stop-and-Wait ARQ Logik für einen einzelnen Peer[cite: 55].
-        """
-        attempt = 0
-        max_retries = 3 [cite: 59]
-        
-        while attempt <= max_retries:
-            # TODO: Sende das serialisierte Paket via self.sock.sendto an (peer_ip, peer_port).
-            
-            # TODO: Setze das Event zurück: self.ack_received_event.clear().
-            
-            # TODO: Warte auf ACK: if self.ack_received_event.wait(timeout=2.0):
-            #    -> Wenn True (ACK kam): return (Erfolg).
-            
-            # TODO: Wenn Timeout abgelaufen:
-            #    -> Erhöhe 'attempt'.
-            #    -> Logge Retransmission.
-        
-        # TODO: Wenn Schleife endet ohne ACK -> Logge "Peer unreachable"[cite: 71].
-        pass
+    def sender_thread(self):
+        while self.running:
+            outboundPacket = self.outboundPacketQueue.get(timeout=PeerMiddleware.TIMEOUT_TIME)
+            self.sock.sendto(outboundPacket.data.to_bytes(), outboundPacket.destination)
+            transaction = Transaction(data=outboundPacket.data, timestamp=time.time(), retries=0, destination=outboundPacket.destination)
+            self.transactionList.append(transaction)
+            self.outboundPacketQueue.task_done()
 
-    def _listen_loop(self):
+    def receiver_thread(self):
         """
         Endlosschleife zum Empfangen von UDP-Paketen (Hintergrund-Thread).
         """
         while self.running:
             # TODO: Empfange Daten: data, addr = self.sock.recvfrom(buffer_size)[cite: 19].
-            
+            data, addr = self.sock.recvfrom(PeerMiddleware.RECV_BYTES)
             # --- Error Injection [cite: 18, 60] ---
             # TODO: Prüfe, ob Error Injection konfiguriert ist.
+
             # TODO: Parse vorläufig den Header, um Message-ID zu prüfen.
-            # TODO: Falls Treffer: Flippe das Bit an 'bit_index' im 'data'-Bytearray mittels XOR (^).
-            
+            # TODO: Falls Treffer: Flippe das Bit an 'bit_index' im 'data'-Bytearray mittels XOR (^). (I think not needed)
+            packet = Packet().from_bytes(data)
+
             # --- Checksummen Prüfung [cite: 57, 65] ---
             # TODO: Berechne Checksumme über die empfangenen 'data'.
             # TODO: Wenn Checksumme != 0 (oder erwartet): Verwerfe Paket (continue).
-            
-            # --- Verarbeitung ---
-            # TODO: Deserialisiere Paket (Packet.from_bytes).
-            
-            if packet.is_ack:
-                # TODO: Prüfe, ob das ACK zur aktuell gesendeten Nachricht passt.
-                # TODO: Setze self.ack_received_event.set() um den Sender-Thread zu wecken.
+
+            # process
+            if packet.packetType == Packet.ACK_TYPE:
+                for transaction in self.transactionList[:]:
+                    if transaction.destination == addr and transaction.data.sequence_num == packet.sequence_num:
+                        self.transactionList.remove(transaction)
+                else:
+                    continue
             else:
-                # Es ist eine DATA Nachricht
-                # TODO: Sende sofort ein ACK-Paket an 'addr' zurück.
-                # TODO: Übergebe Payload an UI oder Log-Funktion[cite: 43].
-                pass
+                self.preProcessingQueue.put(packet)
+
+
+    def reaper_thread(self):
+        while self.running:
+            currentTime = time.time()
+            for transaction in self.transactionList[:]:
+                if (currentTime - transaction.timestamp) > PeerMiddleware.TIMEOUT_TIME:
+                    self.transactionList.remove(transaction)
+                    if transaction.retries + 1 < PeerMiddleware.MAX_RETRIES:
+                        self.outboundPacketQueue.put(transaction.data)
+            time.sleep(self.reaper_sleep_time)
