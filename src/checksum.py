@@ -40,7 +40,19 @@ def validate_checksum(raw_data: bytes) -> bool:
         bool: True if the checksum is valid (result is 0), False otherwise.
     """
 
-    result = internet_checksum(raw_data)
+    if len(raw_data) < 8:
+        return False
 
-    # Wenn das Ergebnis 0 ist, ist das Paket integer (unverändert).
-    return result == 0
+    # 1. Die empfangene Checksumme aus dem Header extrahieren (Index 5 & 6)
+    received_checksum = (raw_data[5] << 8) + raw_data[6]
+
+    # 2. Eine Kopie der Daten erstellen, bei der die Checksumme 0 ist
+    mutable_data = bytearray(raw_data)
+    mutable_data[5] = 0
+    mutable_data[6] = 0
+
+    # 3. Checksumme neu berechnen
+    recalculated = internet_checksum(bytes(mutable_data))
+
+    # 4. Vergleichen
+    return received_checksum == recalculated
