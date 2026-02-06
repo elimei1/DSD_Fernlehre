@@ -1,6 +1,5 @@
 import threading
 
-
 class ThreadHandler:
 
     def __init__(self, middleware):

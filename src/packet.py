@@ -2,6 +2,7 @@ import struct
 from dataclasses import dataclass
 from typing import ClassVar, Union
 import checksum as cs
+from PacketType import PacketType
 
 
 @dataclass
@@ -31,18 +32,16 @@ class Packet:
 
     HEADER_FORMAT: ClassVar[str] = "!BIHB"
     HEADER_SIZE: ClassVar[int] = struct.calcsize(HEADER_FORMAT)
-    ACK_TYPE: ClassVar[int] = 0
-    DATA_TYPE: ClassVar[int] = 1
 
     sender_id: str = ""
     senderID_length: int = -1
     sequence_number: int = 0
-    packetType: int = -1
+    packetType: int = PacketType.NONE
     payload: str = ""
     checksum: int = 0
 
     def setAck(self):
-        self.packetType = self.ACK_TYPE
+        self.packetType = PacketType.ACK
         return self
 
     def setSenderID(self, sender_id):
@@ -72,21 +71,30 @@ class Packet:
         else:
             self.payload = payload
 
-        self.packetType = self.DATA_TYPE
+        self.packetType = PacketType.DATA
         return self
 
     def getHeaderMap(self):
-        return {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
+        return {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType.value, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
                   "SenderID_length": self.senderID_length, "SenderID": self.sender_id}
 
     def getHeaderStruct(self):
         return struct.pack(
             self.HEADER_FORMAT,
-            self.packetType,
+            self.packetType.value,
             self.sequence_number,
             self.checksum,
             self.senderID_length,
         )
+
+    def isData(self):
+        return self.packetType == PacketType.DATA
+
+    def isAck(self):
+        return self.packetType == PacketType.ACK
+
+    def getSequenceNumber(self):
+        return self.sequence_number
 
     def to_bytes(self):
         """
