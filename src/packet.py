@@ -1,7 +1,8 @@
 import struct
 from dataclasses import dataclass
-from typing import ClassVar, Union
+from typing import ClassVar
 import checksum as cs
+from PacketType import PacketType
 
 
 @dataclass
@@ -31,18 +32,16 @@ class Packet:
 
     HEADER_FORMAT: ClassVar[str] = "!BIHB"
     HEADER_SIZE: ClassVar[int] = struct.calcsize(HEADER_FORMAT)
-    ACK_TYPE: ClassVar[int] = 0
-    DATA_TYPE: ClassVar[int] = 1
 
     sender_id: str = ""
     senderID_length: int = -1
     sequence_number: int = 0
-    packetType: int = -1
+    packetType: PacketType = PacketType.NONE
     payload: str = ""
     checksum: int = 0
 
     def setAck(self):
-        self.packetType = self.ACK_TYPE
+        self.packetType = PacketType.ACK
         return self
 
     def setSenderID(self, sender_id):
@@ -72,21 +71,30 @@ class Packet:
         else:
             self.payload = payload
 
-        self.packetType = self.DATA_TYPE
+        self.packetType = PacketType.DATA
         return self
 
     def getHeaderMap(self):
-        return {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
+        return {"HeaderFormat": self.HEADER_FORMAT, "PacketType": self.packetType.value, "SequenceNumber": self.sequence_number, "Checksum": self.checksum,
                   "SenderID_length": self.senderID_length, "SenderID": self.sender_id}
 
     def getHeaderStruct(self):
         return struct.pack(
             self.HEADER_FORMAT,
-            self.packetType,
+            self.packetType.value,
             self.sequence_number,
             self.checksum,
             self.senderID_length,
         )
+
+    def isData(self):
+        return self.packetType == PacketType.DATA
+
+    def isAck(self):
+        return self.packetType == PacketType.ACK
+
+    def getSequenceNumber(self):
+        return self.sequence_number
 
     def to_bytes(self):
         """
@@ -124,7 +132,7 @@ class Packet:
         # unpack returns tuple: (Type, SeqNum, Checksum, ID_Len)
         header_values = struct.unpack(cls.HEADER_FORMAT, data_bytes[: cls.HEADER_SIZE])
 
-        p_type = header_values[0]
+        p_type = PacketType(header_values[0])
         seq_num: int = header_values[1]
         received_checksum = header_values[2]
         sid_len: int = header_values[3]
@@ -140,9 +148,9 @@ class Packet:
 
         # 5. create new object
         packet = Packet().setChecksum(received_checksum).setSenderID(data_bytes[sid_start:sid_end]).setSequenceNumber(seq_num)
-        if p_type == Packet.ACK_TYPE:
+        if p_type == PacketType.ACK:
             packet.setAck()
-        else:
+        elif p_type == PacketType.DATA:
             packet.setPayload(data_bytes[sid_end:])
 
         return packet

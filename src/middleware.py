@@ -1,9 +1,8 @@
 import socket
-import threading
 import time
 import queue
+from copy import deepcopy
 
-from OutboundPacket import OutboundPacket
 from ThreadHandler import ThreadHandler
 from packet import Packet
 from SeqNumGenerator import SeqNumGenerator
@@ -11,6 +10,11 @@ from Transaction import Transaction
 import checksum as cs
 from error_injection import inject_error
 import utils as utils
+from PacketType import PacketType
+from TransactionType import TransactionType
+from DeliveryPacketType import DeliveryPacketType
+from DeliveryPackets import DeliveryPacket
+
 
 class PeerMiddleware:
     TIMEOUT_TIME = 1.0
@@ -25,62 +29,95 @@ class PeerMiddleware:
 
         # UDP Socket Setup [cite: 12, 32]
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(('', my_port))
+        self.sock.bind(('0.0.0.0', my_port))
         self.sock.settimeout(1.0)
-        self.seqNumGenerator = SeqNumGenerator()
+
+        self.reversePeers = {}
+        for peerID in self.peers:
+            self.peers[peerID].append(SeqNumGenerator())
+            self.reversePeers[self.peers[peerID][0] + str(self.peers[peerID][1])] = peerID
+
+        print(self.reversePeers)
         self.deliveryQueue = queue.Queue() # for messages received
         self.outboundPacketQueue = queue.Queue() # for messages to be sent
         self.preProcessingQueue = queue.Queue()
         self.transactionList = []
         self.reaper_sleep_time = 0.5
         self.running = True
-        self.injected_errors = set()
-        self.received_seq_nums = {} # Dict: {sender_id: last_seq_num}
-        
+        self.injected_errors = None
+        self.threadhandler = ThreadHandler(self)
+
+    def start(self):
+        self.threadhandler.startReceiverThread()
+        self.threadhandler.startSenderThread()
+        self.threadhandler.startReaperThread()
+        self.threadhandler.startPreProcessingThread()
+
+    def shutdown(self):
+        self.threadhandler.shutdown()
+
     def send_chat_message(self, text):
         """Called by TUI to send a message to all peers."""
         # Create packet object
         pkt = Packet()
-        pkt.setSenderID(self.my_id)
-        pkt.setSequenceNumber(self.seqNumGenerator.getSeqNum())
         pkt.setPayload(text)
-        
+
+        transaction = Transaction(packet=pkt, transactionType=TransactionType.DATA)
         # Put into preProcessingQueue
-        self.preProcessingQueue.put(pkt)
+        self.preProcessingQueue.put(transaction)
 
     def preProcessing_thread(self):
         while self.running:
             try:
-                packet = self.preProcessingQueue.get(timeout=1.0)
-                # Create One OutboundPacket per peer
-                for peer_id, peer_info in self.peers.items():                    
-                    target_ip, target_port = peer_info
-                    # OutboundPacket needs (Packet, (ip, port))
-                    self.outboundPacketQueue.put(OutboundPacket(packet, (target_ip, target_port)))
-                    
-                    time.sleep(1.0)
+                transaction = self.preProcessingQueue.get(timeout=1.0)
+
+                if transaction.transactionType == TransactionType.DATA:
+                    transaction.packet.setSenderID(self.my_id)
+                    # Create One packet per peer
+                    for peerID in self.peers:
+                        temp_transaction = deepcopy(transaction)
+                        temp_transaction.destination = self.peers[peerID][0], self.peers[peerID][1]
+                        temp_transaction.packet.setSequenceNumber(self.peers[peerID][2].getSeqNum())
+                        self.outboundPacketQueue.put(temp_transaction)
+                elif transaction.transactionType == TransactionType.ACK:
+                    transaction.packet.setAck().setSenderID(self.my_id)
+                    self.outboundPacketQueue.put(transaction)
+                elif transaction.transactionType == TransactionType.RETRANSMIT:
+                    transaction.retries += 1
+                elif transaction.transactionType == TransactionType.RELAY:
+                    packet = Packet().setSenderID(self.my_id).setPayload(transaction.packet.getPayload())
+                    transaction_copy = Transaction(packet=packet, transactionType=TransactionType.DATA)
+                    for peerID in self.peers:
+                        if (self.peers[peerID][0], self.peers[peerID][1]) == transaction_copy.destination or self.my_id == peerID:
+                            continue
+                        temp_transaction = deepcopy(transaction_copy)
+                        temp_transaction.destination = self.peers[peerID][0], self.peers[peerID][1]
+                        temp_transaction.packet.setSequenceNumber(self.peers[peerID][2].getSeqNum())
+                        self.outboundPacketQueue.put(temp_transaction)
+
                 self.preProcessingQueue.task_done()
+
             except queue.Empty:
                 continue
 
     def sender_thread(self):
         while self.running:
             try:
-                outboundPacket = self.outboundPacketQueue.get(timeout=1.0)
-                
+                transaction = self.outboundPacketQueue.get(timeout=1.0)
+
                 # Convert packet to bytes (checksum calculated here)
-                data_bytes = outboundPacket.data.to_bytes()
-                
-                self.sock.sendto(data_bytes, outboundPacket.destination)
-                
-                # Add to transaction list for reliability (ACK waiting)
-                transaction = Transaction(
-                    data=outboundPacket.data, 
-                    timestamp=time.time(), 
-                    retries=0, 
-                    destination=outboundPacket.destination
-                )
-                self.transactionList.append(transaction)
+                data_bytes = transaction.packet.to_bytes()
+
+                self.sock.sendto(data_bytes, transaction.destination)
+
+                if transaction.transactionType == TransactionType.DATA:
+                    transaction.timestamp = time.time()
+                    transaction.retries = 0
+                    self.transactionList.append(transaction)
+                elif transaction.transactionType == TransactionType.RETRANSMIT:
+                    transaction.timestamp = time.time()
+                    self.transactionList.append(transaction)
+
                 self.outboundPacketQueue.task_done()
             except queue.Empty:
                 continue
@@ -91,37 +128,27 @@ class PeerMiddleware:
         """
         while self.running:
             try:
-                data, addr = self.sock.recvfrom(1024)
+                data, addr = self.sock.recvfrom(PeerMiddleware.RECV_BYTES)
+                utils.log_message(self.log_file, "SYSTEM", "RECEIVE",
+                                  f"Received packet from addr {addr}")
             except socket.timeout:
                 continue
-            except OSError:
+            except OSError as e:
+                print("An os error has occurred. Please restart the software.")
+                print(e)
                 break
             
             if self.error_config:
-                target_msg_id, bit_idx = self.error_config
-                # Extract SeqNum (assuming standard header layout)
-                if len(data) >= 5:
-                    seq_num_recv = int.from_bytes(data[1:5], byteorder='big')
-                    
-                    if seq_num_recv == target_msg_id and seq_num_recv not in self.injected_errors:
-                        # Identify Packet Type (Byte 0)
-                        pkt_type = "ACK" if data[0] == 0 else "Chat"
-                        msg = f"Simulating Bit-Flip on {pkt_type} Msg {seq_num_recv}..."
-                        if self.log_file:
-                             utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", msg)
-                        self.deliveryQueue.put(f"!!! {msg}") # Notify TUI
-                        
-                        data = inject_error(data, bit_idx)
-                        self.injected_errors.add(seq_num_recv) # Mark as done
+                inject_error(data)
 
             # --- Checksum Validation ---
-            if not cs.validate_checksum(data): 
+            if not cs.validate_checksum(data):
                 # Checksum failed
-                msg = f"Checksum Mismatch! Dicarding packet from {addr}."
-                # print(msg) 
+                msg = f"Checksum Mismatch! Discarding packet from {addr}."
+                # print(msg) # Keeping console clean
                 if self.log_file:
                     utils.log_message(self.log_file, "SYSTEM", "DROP", msg)
-                self.deliveryQueue.put(f"!!! {msg}") # Notify TUI
+                self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE)) # Notify TUI
                 continue
 
             try:
@@ -130,46 +157,35 @@ class PeerMiddleware:
                 print(f"Error parsing packet: {e}")
                 continue
 
+            utils.log_message(self.log_file, "SYSTEM", "RECEIVE",
+                                  f"data {packet}")
+
             # process
-            if packet.packetType == Packet.ACK_TYPE:
+            if packet.packetType == PacketType.ACK:
                 # Remove from transaction list
+                utils.log_message(self.log_file, "SYSTEM", "ACK", f"searching transaction {addr} and seq number {packet.getSequenceNumber()}")
                 for transaction in self.transactionList[:]:
-                    if transaction.destination == addr and transaction.data.sequence_number == packet.sequence_number:
+                    utils.log_message(self.log_file, "SYSTEM", "ACK",
+                                      f"transaction {transaction.destination} and seq {transaction.packet.sequence_number}")
+                    if transaction.destination == addr and transaction.packet.sequence_number == packet.getSequenceNumber():
                         self.transactionList.remove(transaction)
+                        break
+                else:
+                    utils.log_message(self.log_file, "SYSTEM", "ACK",
+                                      f"Got ACK that was not requested")
             else:
                 # DATA Packet received
-                
-                # --- Duplicate Detection ---
-                last_seq = self.received_seq_nums.get(packet.sender_id, -1)
-                if packet.sequence_number <= last_seq:
-                    # Duplicate!
-                    msg = f"Duplicate Msg {packet.sequence_number} from Peer {packet.sender_id}. Dropping payload, re-sending ACK."
-                    if self.log_file:
-                        utils.log_message(self.log_file, "SYSTEM", "DUPLICATE", msg)
-                    self.deliveryQueue.put(f"!!! {msg}")
-                    
-                    # Send ACK again (because the previous ACK might have been lost)
-                    ack_pkt = Packet()
-                    ack_pkt.setAck()
-                    ack_pkt.setSenderID(self.my_id)
-                    ack_pkt.setSequenceNumber(packet.sequence_number)
-                    self.sock.sendto(ack_pkt.to_bytes(), addr)
-                    continue # Stop processing (don't deliver)
-                
-                # New message - update state
-                self.received_seq_nums[packet.sender_id] = packet.sequence_number
-                
-                # 1. Send ACK immediately
-                ack_pkt = Packet()
-                ack_pkt.setAck()
-                ack_pkt.setSenderID(self.my_id)
-                ack_pkt.setSequenceNumber(packet.sequence_number)
-                # Checksum calc happens in to_bytes
-                
-                self.sock.sendto(ack_pkt.to_bytes(), addr)
-                
+
+                # Prepare for ack send
+                transaction = Transaction(packet=Packet().setAck().setSequenceNumber(packet.getSequenceNumber()), transactionType=TransactionType.ACK, destination=addr)
+                self.preProcessingQueue.put(transaction)
+
                 # 2. Deliver to Application (TUI)
-                self.deliveryQueue.put(packet)
+                self.deliveryQueue.put(DeliveryPacket(data=packet, type=DeliveryPacketType.PACKET))
+                
+                # 3. Log it
+                if self.log_file:
+                    utils.log_message(self.log_file, packet.sender_id, packet.sequence_number, packet.payload)
 
     def reaper_thread(self):
         while self.running:
@@ -178,16 +194,24 @@ class PeerMiddleware:
                 if (currentTime - transaction.timestamp) > PeerMiddleware.TIMEOUT_TIME:
                     if transaction.retries < PeerMiddleware.MAX_RETRIES:
                         # Retransmit
-                        transaction.retries += 1
-                        transaction.timestamp = currentTime # Reset timer
-                        try:
-                            self.sock.sendto(transaction.data.to_bytes(), transaction.destination)
-                            msg = f"Timeout! Retransmitting Msg {transaction.data.sequence_number}..."
-                            if self.log_file:
-                                 utils.log_message(self.log_file, "SYSTEM", "RETRY", msg)
-                            self.deliveryQueue.put(f"!!! {msg}")
-                        except OSError as e:
-                             print(f"Error retransmitting: {e}")
+                        self.preProcessingQueue.put(transaction)
                     else:
                         self.transactionList.remove(transaction)
             time.sleep(self.reaper_sleep_time)
+
+    def inject_error(self, data):
+        target_msg_id, bit_idx = self.error_config
+        # Extract SeqNum (assuming standard header layout)
+        if len(data) >= 5:
+            seq_num_recv = int.from_bytes(data[1:5], byteorder='big')
+
+            if seq_num_recv == target_msg_id and seq_num_recv not in self.injected_errors:
+                # Identify Packet Type (Byte 0)
+                pkt_type = "ACK" if data[0] == 0 else "Chat"
+                msg = f"Simulating Bit-Flip on {pkt_type} Msg {seq_num_recv}..."
+                if self.log_file:
+                    utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", msg)
+                self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE))  # Notify TUI
+
+                data = inject_error(data, bit_idx)
+                self.injected_errors.add(seq_num_recv)  # Mark as done

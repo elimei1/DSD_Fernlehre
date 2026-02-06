@@ -1,0 +1,85 @@
+version: '3.8'
+
+x-peer-template: &peer-template
+  image: my-app-image:latest
+  depends_on:
+    - base
+  stdin_open: true
+  tty: true
+  networks:
+    peer-network:
+      # This part tells Docker to use the static assignment
+      ipv4_address: null
+  environment:
+    - TERM=xterm-256color
+    - COLORTERM=truecolor
+    - PYTHONUNBUFFERED=1
+
+services:
+  base:
+    build: .
+    image: my-app-image:latest
+    deploy:
+      replicas: 0
+
+  peer1:
+    <<: *peer-template
+    container_name: peer1
+    networks:
+      peer-network:
+        ipv4_address: 172.20.0.11
+    environment:
+      - ID=1
+      - PORT=5001
+      - LOG=peer1.log
+
+  peer2:
+    <<: *peer-template
+    container_name: peer2
+    networks:
+      peer-network:
+        ipv4_address: 172.20.0.12
+    environment:
+      - ID=2
+      - PORT=5002
+      - LOG=peer2.log
+
+  peer3:
+    <<: *peer-template
+    container_name: peer3
+    networks:
+      peer-network:
+        ipv4_address: 172.20.0.13
+    environment:
+      - ID=3
+      - PORT=5003
+      - LOG=peer3.log
+
+  peer4:
+    <<: *peer-template
+    container_name: peer4
+    networks:
+      peer-network:
+        ipv4_address: 172.20.0.14
+    environment:
+      - ID=4
+      - PORT=5004
+      - LOG=peer4.log
+
+  peer5:
+    <<: *peer-template
+    container_name: peer5
+    networks:
+      peer-network:
+        ipv4_address: 172.20.0.15
+    environment:
+      - ID=5
+      - PORT=5005
+      - LOG=peer5.log
+
+networks:
+  peer-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

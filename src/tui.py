@@ -1,12 +1,11 @@
 import blessed
-import threading
 import time
 from queue import Empty
-import sys
 
 from middleware import PeerMiddleware
 from ThreadHandler import ThreadHandler
 import utils
+from DeliveryPacketType import DeliveryPacketType
 
 # Constants for layout
 INPUT_HEIGHT = 3
@@ -202,12 +201,13 @@ class PeerTUI:
         received = False
         try:
             while True:
-                packet = self.mw.deliveryQueue.get_nowait()
+                deliveryPacket = self.mw.deliveryQueue.get_nowait()
                 
                 # Format message
                 timestamp = time.strftime("%H:%M:%S")
                 # Assuming packet is a Packet object or a tuple with sender info
-                if hasattr(packet, 'sender_id') and hasattr(packet, 'payload'):
+                if deliveryPacket.type == DeliveryPacketType.PACKET:
+                    packet = deliveryPacket.data
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
                     
                     # LOGGING (Requirement: UI saves payload to file)
@@ -217,7 +217,10 @@ class PeerTUI:
                             utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
                         except Exception as e:
                             self.add_system_message(f"Log Error: {e}")
-                            
+
+                elif deliveryPacket.type == DeliveryPacketType.SYSTEM_MESSAGE:
+                    self.add_system_message(deliveryPacket.data)
+
                 else:
                     display_msg = f"[{timestamp}] {packet}" # Fallback
                 
