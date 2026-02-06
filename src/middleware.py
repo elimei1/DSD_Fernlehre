@@ -4,7 +4,7 @@ import time
 import queue
 
 from OutboundPacket import OutboundPacket
-from src.ThreadHandler import ThreadHandler
+from ThreadHandler import ThreadHandler
 from packet import Packet
 from SeqNumGenerator import SeqNumGenerator
 from Transaction import Transaction
@@ -37,7 +37,6 @@ class PeerMiddleware:
         self.outboundPacketQueue = queue.Queue() # for messages to be sent
         self.preProcessingQueue = queue.Queue()
         self.transactionList = []
-        self.reaper_sleep_time = 0.5
         self.reaper_sleep_time = 0.5
         self.running = True
         self.injected_errors = set()

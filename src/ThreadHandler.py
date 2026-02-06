@@ -15,7 +15,6 @@ class ThreadHandler:
         self.sender_threads.append(thread)
         thread.start()
 
-
     def startReceiverThread(self):
         thread = threading.Thread(target=self.middleware.receiver_thread)
         self.sender_threads.append(thread)
