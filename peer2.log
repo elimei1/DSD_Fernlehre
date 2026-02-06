@@ -96,3 +96,8 @@
 [2026-02-06 01:58:40] [Peer 1] [MsgID 0] status
 [2026-02-06 02:14:03] [Peer 1] [MsgID 0] test
 [2026-02-06 02:18:00] [Peer 1] [MsgID 0] hallo
+[2026-02-06 17:56:39] [Peer 1] [MsgID 0] test
+[2026-02-06 17:56:48] [Peer 1] [MsgID 1] another
+[2026-02-06 17:56:49] [Peer SYSTEM] [MsgID DUPLICATE] Duplicate Msg 1 from Peer 1. Dropping payload, re-sending ACK.
+[2026-02-06 17:57:43] [Peer 1] [MsgID 2] the third
+[2026-02-06 18:06:48] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 1...

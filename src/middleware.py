@@ -14,7 +14,7 @@ import utils as utils
 
 class PeerMiddleware:
     TIMEOUT_TIME = 1.0
-    MAX_RETRIES = 4
+    MAX_RETRIES = 3
     RECV_BYTES = 4096
 
     def __init__(self, my_id, my_port, peer_list, error_config):
@@ -27,12 +27,7 @@ class PeerMiddleware:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('', my_port))
         self.sock.settimeout(1.0)
-
         self.seqNumGenerator = SeqNumGenerator()
-        print(self.peers)
-
-        for peer in self.peers:
-            peer["seqNumber"] = SeqNumGenerator
         self.deliveryQueue = queue.Queue() # for messages received
         self.outboundPacketQueue = queue.Queue() # for messages to be sent
         self.preProcessingQueue = queue.Queue()
@@ -40,7 +35,7 @@ class PeerMiddleware:
         self.reaper_sleep_time = 0.5
         self.running = True
         self.injected_errors = set()
-        self.threadhandler = ThreadHandler(self)
+        self.received_seq_nums = {} # Dict: {sender_id: last_seq_num}
         
     def send_chat_message(self, text):
         """Called by TUI to send a message to all peers."""
@@ -121,10 +116,10 @@ class PeerMiddleware:
                         self.injected_errors.add(seq_num_recv) # Mark as done
 
             # --- Checksum Validation ---
-            if not cs.validate_checksum(data): # Assuming checksum_valid was a typo and should be cs.validate_checksum
+            if not cs.validate_checksum(data): 
                 # Checksum failed
                 msg = f"Checksum Mismatch! Dicarding packet from {addr}."
-                # print(msg) # Keeping console clean
+                # print(msg) 
                 if self.log_file:
                     utils.log_message(self.log_file, "SYSTEM", "DROP", msg)
                 self.deliveryQueue.put(f"!!! {msg}") # Notify TUI
@@ -144,6 +139,26 @@ class PeerMiddleware:
                         self.transactionList.remove(transaction)
             else:
                 # DATA Packet received
+                
+                # --- Duplicate Detection ---
+                last_seq = self.received_seq_nums.get(packet.sender_id, -1)
+                if packet.sequence_number <= last_seq:
+                    # Duplicate!
+                    msg = f"Duplicate Msg {packet.sequence_number} from Peer {packet.sender_id}. Dropping payload, re-sending ACK."
+                    if self.log_file:
+                        utils.log_message(self.log_file, "SYSTEM", "DUPLICATE", msg)
+                    self.deliveryQueue.put(f"!!! {msg}")
+                    
+                    # Send ACK again (because the previous ACK might have been lost)
+                    ack_pkt = Packet()
+                    ack_pkt.setAck()
+                    ack_pkt.setSenderID(self.my_id)
+                    ack_pkt.setSequenceNumber(packet.sequence_number)
+                    self.sock.sendto(ack_pkt.to_bytes(), addr)
+                    continue # Stop processing (don't deliver)
+                
+                # New message - update state
+                self.received_seq_nums[packet.sender_id] = packet.sequence_number
                 
                 # 1. Send ACK immediately
                 ack_pkt = Packet()

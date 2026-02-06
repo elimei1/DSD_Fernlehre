@@ -17,17 +17,17 @@ class ThreadHandler:
 
     def startReceiverThread(self):
         thread = threading.Thread(target=self.middleware.receiver_thread)
-        self.sender_threads.append(thread)
+        self.receiver_threads.append(thread)
         thread.start()
 
     def startReaperThread(self):
         thread = threading.Thread(target=self.middleware.reaper_thread)
-        self.sender_threads.append(thread)
+        self.reaper_threads.append(thread)
         thread.start()
 
     def startPreProcessingThread(self):
         thread = threading.Thread(target=self.middleware.preProcessing_thread)
-        self.sender_threads.append(thread)
+        self.preProcessingThreads.append(thread)
         thread.start()
 
     def shutdown(self):
