@@ -53,13 +53,12 @@ class PeerMiddleware:
             try:
                 packet = self.preProcessingQueue.get(timeout=1.0)
                 # Create One OutboundPacket per peer
-                for peer_id, peer_info in self.peers.items():
-                    if peer_id == self.my_id:
-                        continue # Don't send to self
-                    
+                for peer_id, peer_info in self.peers.items():                    
                     target_ip, target_port = peer_info
                     # OutboundPacket needs (Packet, (ip, port))
                     self.outboundPacketQueue.put(OutboundPacket(packet, (target_ip, target_port)))
+                    
+                    time.sleep(1.0)
                 self.preProcessingQueue.task_done()
             except queue.Empty:
                 continue
@@ -171,10 +170,6 @@ class PeerMiddleware:
                 
                 # 2. Deliver to Application (TUI)
                 self.deliveryQueue.put(packet)
-                
-                # 3. Log it
-                if self.log_file:
-                    utils.log_message(self.log_file, packet.sender_id, packet.sequence_number, packet.payload)
 
     def reaper_thread(self):
         while self.running:

@@ -6,7 +6,7 @@ import sys
 
 from middleware import PeerMiddleware
 from ThreadHandler import ThreadHandler
-from utils import load_peer_config
+import utils
 
 # Constants for layout
 INPUT_HEIGHT = 3
@@ -186,9 +186,7 @@ class PeerTUI:
 
         if hasattr(self.mw, 'send_chat_message'):
              self.mw.send_chat_message(msg)
-             # Show own message in history
-             timestamp = time.strftime("%H:%M:%S")
-             self.add_to_history(f"[{timestamp}] [Me] {msg}")
+
         else:
              self.add_system_message(f"Sending: {msg}")
              try:
@@ -211,6 +209,15 @@ class PeerTUI:
                 # Assuming packet is a Packet object or a tuple with sender info
                 if hasattr(packet, 'sender_id') and hasattr(packet, 'payload'):
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
+                    
+                    # LOGGING (Requirement: UI saves payload to file)
+                    if hasattr(self.args, 'log') and self.args.log:
+                        # We need to import utils if not present, but it is imported at top
+                        try:
+                            utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
+                        except Exception as e:
+                            self.add_system_message(f"Log Error: {e}")
+                            
                 else:
                     display_msg = f"[{timestamp}] {packet}" # Fallback
                 
