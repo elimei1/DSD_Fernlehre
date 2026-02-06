@@ -50,7 +50,7 @@ class Packet:
         if isinstance(sender_id, bytes):
             self.sender_id = sender_id.decode("utf-8")
         else:
-            self.sender_id = sender_id
+            self.sender_id = str(sender_id)
 
         # set senderId length
         if len(self.sender_id) > 255:

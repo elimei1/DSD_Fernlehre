@@ -3,20 +3,8 @@ import sys
 
 from middleware import PeerMiddleware
 from ThreadHandler import ThreadHandler
-from tui import PeerTUI  # Importiere deine neue TUI-Klasse
+from tui import PeerTUI
 from utils import load_peer_config
-
-
-def print_banner():
-    print(r"""
-  ____  ____  ____     ____  _           _
- |  _ \|___ \|  _ \   / ___|| |__   __ _| |_
- | |_) | __) | |_) | | |    | '_ \ / _` | __|
- |  __/ / __/|  __/  | |___ | | | | (_| | |_
- |_|   |_____|_|      \____||_| |_|\__,_|\__|
-    """)
-    print("Distributed Systems Dependability - Fernlehre")
-    print("-" * 50)
 
 
 def main():
@@ -34,7 +22,6 @@ def main():
     )
 
     args = parser.parse_args()
-    print_banner()
 
     mw = None
     handler = None
@@ -51,35 +38,43 @@ def main():
         try:
             # Middleware-Instanz erstellen
             mw = PeerMiddleware(args.id, args.port, peers, error_config)
+            mw.log_file = args.log
 
             # Hintergrund-Threads über den ThreadHandler starten
             handler = ThreadHandler(mw)
             handler.startReceiverThread()
             handler.startSenderThread()
             handler.startReaperThread()
-            # Falls vorhanden: handler.startPreProcessingThread()
+            handler.startPreProcessingThread()
 
             print(f"Middleware for Peer {args.id} initialized and threads started.")
         except Exception as e:
             print(f"Failed to initialize Middleware: {e}")
             sys.exit(1)
     else:
-        print(
-            "Configuration missing. Please start with all required arguments or use 'setup' in TUI."
-        )
+        print("Starting in UNCONFIGURED mode. Please run /setup in the TUI.")
+        mw = None
+        handler = None
 
-    # 3. Start der TUI (Ersetzt die alte while-Schleife)
+    # 3. Start der TUI
     try:
         # Wir übergeben das Middleware-Objekt an die TUI
         tui = PeerTUI(mw, args)
-        tui.cmdloop()  # Startet die interaktive Shell
+        tui.run()
     except KeyboardInterrupt:
-        print("\nExiting...")
+        print("\nExiting (KeyboardInterrupt)...")
+    except Exception as e:
+        import traceback
+        print("\nCRITICAL ERROR in TUI:")
+        traceback.print_exc()
     finally:
         # 4. Cleanup
-        if handler:
+        # Prioritize handler from TUI if it was created dynamically
+        active_handler = tui.handler if 'tui' in locals() and tui and tui.handler else handler
+        
+        if active_handler:
             print("Shutting down threads...")
-            handler.shutdown()
+            active_handler.shutdown()
         print("Cleanup done.")
 
 

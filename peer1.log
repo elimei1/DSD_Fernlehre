@@ -1,0 +1,142 @@
+[2026-02-06 00:18:44] [Peer 1] [MsgID 0] help
+[2026-02-06 00:20:04] [Peer 2] [MsgID 0] test
+[2026-02-06 00:20:38] [Peer 1] [MsgID 0] vom einser
+[2026-02-06 00:46:25] [Peer 1] [MsgID 0] hallo
+[2026-02-06 00:46:37] [Peer 1] [MsgID 1] teeeest
+[2026-02-06 00:46:49] [Peer 2] [MsgID 0] vom zweier
+[2026-02-06 00:47:02] [Peer 2] [MsgID 1] dddd
+[2026-02-06 00:57:04] [Peer 2] [MsgID 0] tewester
+[2026-02-06 00:57:12] [Peer 2] [MsgID 1] t
+[2026-02-06 00:57:13] [Peer 2] [MsgID 2] r
+[2026-02-06 00:57:14] [Peer 2] [MsgID 3] a
+[2026-02-06 00:57:14] [Peer 2] [MsgID 4] x
+[2026-02-06 00:57:15] [Peer 2] [MsgID 5] c
+[2026-02-06 00:57:15] [Peer 2] [MsgID 6] v
+[2026-02-06 00:57:15] [Peer 2] [MsgID 7] h
+[2026-02-06 00:57:16] [Peer 2] [MsgID 8] g
+[2026-02-06 00:57:17] [Peer 2] [MsgID 9] d
+[2026-02-06 00:57:17] [Peer 2] [MsgID 10] s
+[2026-02-06 00:57:18] [Peer 2] [MsgID 11] s
+[2026-02-06 00:57:18] [Peer 2] [MsgID 12] s
+[2026-02-06 00:57:19] [Peer 2] [MsgID 13] s
+[2026-02-06 00:57:19] [Peer 2] [MsgID 14] d
+[2026-02-06 00:57:20] [Peer 2] [MsgID 15] x
+[2026-02-06 00:57:20] [Peer 2] [MsgID 16] x
+[2026-02-06 00:57:20] [Peer 2] [MsgID 17] y
+[2026-02-06 00:57:21] [Peer 2] [MsgID 18] d
+[2026-02-06 00:57:21] [Peer 2] [MsgID 19] d
+[2026-02-06 00:57:22] [Peer 2] [MsgID 20] c
+[2026-02-06 00:57:51] [Peer 1] [MsgID 0] g
+[2026-02-06 00:58:24] [Peer 2] [MsgID 0] a
+[2026-02-06 01:00:40] [Peer 1] [MsgID 0] a
+[2026-02-06 01:06:15] [Peer 1] [MsgID 0] halloooooooo
+[2026-02-06 01:06:18] [Peer 1] [MsgID 1] aaaaaaaaaaaaaaaaaaaa
+[2026-02-06 01:06:20] [Peer 1] [MsgID 2] aaaaaaaaaaaaaaaaaaaaaaaa
+[2026-02-06 01:17:29] [Peer 1] [MsgID 0] dddddddddddddddddddddddd
+[2026-02-06 01:17:31] [Peer 1] [MsgID 1] ddddddddddddddddddddddddddddd
+[2026-02-06 01:17:33] [Peer 1] [MsgID 2] ddddddddddddddddddddddddddd
+[2026-02-06 01:17:38] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:38] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:39] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:39] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:40] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:40] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:41] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:41] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:42] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:17:42] [Peer SYSTEM] [MsgID ERR-INJECT] Injecting Error into Msg 3 at bit 8
+[2026-02-06 01:21:13] [Peer 1] [MsgID 0] qqqqqqqqqqqqqqqqqqq
+[2026-02-06 01:21:15] [Peer 1] [MsgID 1] qqqqqqqqqqqqqqqqqqqqqq
+[2026-02-06 01:21:26] [Peer 1] [MsgID 2] qqqqqqqqqqqqqqqqqqqqqq
+[2026-02-06 01:21:31] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:31] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:32] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:32] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:33] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:33] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:34] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:21:34] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:23:58] [Peer 1] [MsgID 0] yyyyyyyyyyyyyyyyyyyyy
+[2026-02-06 01:24:00] [Peer 1] [MsgID 1] yyyyyyyyyyyyyyyyyyyyyyy
+[2026-02-06 01:24:02] [Peer 1] [MsgID 2] yyyyyyyyyyyyyyyyyyyyy
+[2026-02-06 01:24:04] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Msg 3...
+[2026-02-06 01:24:04] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5001).
+[2026-02-06 01:24:06] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:24:06] [Peer 1] [MsgID 3] yyyyyyyyyyyyyyyyyy
+[2026-02-06 01:26:54] [Peer 1] [MsgID 0] 1
+[2026-02-06 01:26:56] [Peer 1] [MsgID 1] 2
+[2026-02-06 01:27:00] [Peer 1] [MsgID 2] 2a
+[2026-02-06 01:27:09] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Msg 3...
+[2026-02-06 01:27:09] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5001).
+[2026-02-06 01:27:10] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:27:10] [Peer 1] [MsgID 3] das ist eine test nachricht
+[2026-02-06 01:33:22] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Msg 3...
+[2026-02-06 01:33:22] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5002).
+[2026-02-06 01:33:23] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:34:31] [Peer 2] [MsgID 0] wwwwwwwww
+[2026-02-06 01:35:57] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Msg 3...
+[2026-02-06 01:35:57] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5002).
+[2026-02-06 01:35:58] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 3...
+[2026-02-06 01:36:52] [Peer 2] [MsgID 0] aaaaaaaaaaaaaaaaaa
+[2026-02-06 01:36:53] [Peer 2] [MsgID 0] aaaaaaaaaaaaaaaaaa
+[2026-02-06 01:37:02] [Peer 2] [MsgID 1] bbbbbbbbbbbbb
+[2026-02-06 01:37:05] [Peer 2] [MsgID 2] cccccccccccccccc
+[2026-02-06 01:37:14] [Peer 2] [MsgID 3] sssssssssssssssssss
+[2026-02-06 01:37:15] [Peer 2] [MsgID 3] sssssssssssssssssss
+[2026-02-06 01:37:30] [Peer 2] [MsgID 4] aaaaa
+[2026-02-06 01:37:30] [Peer 2] [MsgID 5] a
+[2026-02-06 01:37:31] [Peer 2] [MsgID 6] a
+[2026-02-06 01:37:31] [Peer 2] [MsgID 7] a
+[2026-02-06 01:37:31] [Peer 2] [MsgID 8] a
+[2026-02-06 01:37:32] [Peer 2] [MsgID 9] a
+[2026-02-06 01:37:32] [Peer 2] [MsgID 10] a
+[2026-02-06 01:37:32] [Peer 2] [MsgID 11] a
+[2026-02-06 01:37:33] [Peer 2] [MsgID 12] a
+[2026-02-06 01:37:35] [Peer 2] [MsgID 13] ac
+[2026-02-06 01:37:36] [Peer 2] [MsgID 14] v
+[2026-02-06 01:37:37] [Peer 2] [MsgID 15] b
+[2026-02-06 01:37:37] [Peer 2] [MsgID 16] n
+[2026-02-06 01:37:37] [Peer 2] [MsgID 17] m
+[2026-02-06 01:37:38] [Peer 2] [MsgID 18] k
+[2026-02-06 01:37:38] [Peer 2] [MsgID 19] l
+[2026-02-06 01:37:39] [Peer 2] [MsgID 20] ö
+[2026-02-06 01:37:39] [Peer 2] [MsgID 21] ä
+[2026-02-06 01:37:40] [Peer 2] [MsgID 22] ü
+[2026-02-06 01:37:40] [Peer 2] [MsgID 23] ü
+[2026-02-06 01:37:41] [Peer 2] [MsgID 24] o
+[2026-02-06 01:37:42] [Peer 2] [MsgID 25] i
+[2026-02-06 01:37:42] [Peer 2] [MsgID 26] z
+[2026-02-06 01:37:43] [Peer 2] [MsgID 27] t
+[2026-02-06 01:37:43] [Peer 2] [MsgID 28] r
+[2026-02-06 01:37:43] [Peer 2] [MsgID 29] e
+[2026-02-06 01:37:44] [Peer 2] [MsgID 30] w
+[2026-02-06 01:37:44] [Peer 2] [MsgID 31] w
+[2026-02-06 01:37:45] [Peer 2] [MsgID 32] q
+[2026-02-06 01:37:45] [Peer 2] [MsgID 33] a
+[2026-02-06 01:37:45] [Peer 2] [MsgID 34] s
+[2026-02-06 01:37:46] [Peer 2] [MsgID 35] d
+[2026-02-06 01:37:46] [Peer 2] [MsgID 36] f
+[2026-02-06 01:37:46] [Peer 2] [MsgID 37] g
+[2026-02-06 01:37:47] [Peer 2] [MsgID 38] h
+[2026-02-06 01:37:47] [Peer 2] [MsgID 39] j
+[2026-02-06 01:37:47] [Peer 2] [MsgID 40] k
+[2026-02-06 01:37:48] [Peer 2] [MsgID 41] l
+[2026-02-06 01:37:48] [Peer 2] [MsgID 42] ö
+[2026-02-06 01:38:10] [Peer 2] [MsgID 0] aaaaa
+[2026-02-06 01:38:13] [Peer 2] [MsgID 1] bbbbbb
+[2026-02-06 01:38:16] [Peer 2] [MsgID 2] ccccccc
+[2026-02-06 01:38:43] [Peer 2] [MsgID 3] ddddddddd
+[2026-02-06 01:38:45] [Peer 2] [MsgID 3] ddddddddd
+[2026-02-06 01:42:33] [Peer 2] [MsgID 0] aaaa
+[2026-02-06 01:42:47] [Peer 2] [MsgID 1] vvvvvv
+[2026-02-06 01:42:48] [Peer 2] [MsgID 1] vvvvvv
+[2026-02-06 01:44:30] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Msg 1...
+[2026-02-06 01:44:30] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5002).
+[2026-02-06 01:44:32] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 1...
+[2026-02-06 01:51:16] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on ACK Msg 1...
+[2026-02-06 01:51:16] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5002).
+[2026-02-06 01:51:17] [Peer SYSTEM] [MsgID RETRY] Timeout! Retransmitting Msg 1...
+[2026-02-06 01:52:22] [Peer 2] [MsgID 0] aaaaaaaaaaaa
+[2026-02-06 01:52:24] [Peer SYSTEM] [MsgID ERR-INJECT] Simulating Bit-Flip on Chat Msg 1...
+[2026-02-06 01:52:24] [Peer SYSTEM] [MsgID DROP] Checksum Mismatch! Dicarding packet from ('127.0.0.1', 5002).
+[2026-02-06 01:52:25] [Peer 2] [MsgID 1] bbbbbbbbbbbb

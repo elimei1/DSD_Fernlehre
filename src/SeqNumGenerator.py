@@ -1,6 +1,6 @@
 
 class SeqNumGenerator(object):
-    _seq_num: int = -1
+    _seq_num: int = 0
     MAX_SEQ_NUM: int = pow(2, 32)
 
     def getSeqNum(self) -> int:

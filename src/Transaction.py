@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.packet import Packet
+from packet import Packet
 
 
 @dataclass

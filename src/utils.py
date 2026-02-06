@@ -24,11 +24,17 @@ def load_peer_config(filepath):
     
     return peers
 
+import datetime
+
 def log_message(filepath, sender_id, msg_id, payload):
     """
     Saves received messages to a file[cite: 43].
     """
-    # TODO: Open log file in append mode ('a').
-    # TODO: Write timestamp, sender ID, message ID, and text payload.
-    # TODO: Flush or close the file to prevent data loss.
-    pass
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [Peer {sender_id}] [MsgID {msg_id}] {payload}\n"
+        
+        with open(filepath, 'a', encoding='utf-8') as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f"Error writing to log file: {e}")
