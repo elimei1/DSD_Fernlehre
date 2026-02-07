@@ -2,7 +2,6 @@ import argparse
 import sys
 
 from middleware import PeerMiddleware
-from ThreadHandler import ThreadHandler
 from tui import PeerTUI
 from utils import load_peer_config
 
@@ -31,8 +30,7 @@ def main():
         peers = load_peer_config(args.peers)
         error_config = (
             (args.error_msg_id, args.error_bit_idx)
-            if args.error_msg_id is not None
-            else None
+            if args.error_msg_id is not None else None
         )
 
         try:
@@ -41,11 +39,7 @@ def main():
             mw.log_file = args.log
 
             # Hintergrund-Threads über den ThreadHandler starten
-            handler = ThreadHandler(mw)
-            handler.startReceiverThread()
-            handler.startSenderThread()
-            handler.startReaperThread()
-            handler.startPreProcessingThread()
+            mw.start()
 
             print(f"Middleware for Peer {args.id} initialized and threads started.")
         except Exception as e:
