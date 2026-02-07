@@ -299,7 +299,7 @@ class PeerTUI:
                      peers_file = "peers.txt"
                  # Verify?
                  try:
-                     peers = load_peer_config(peers_file)
+                     peers = utils.load_peer_config(peers_file)
                      break
                  except Exception as e:
                      self.add_system_message(f"Error loading file: {e}")
@@ -326,11 +326,7 @@ class PeerTUI:
              mw.log_file = new_args.log
              
              # Init Handler
-             handler = ThreadHandler(mw)
-             handler.startReceiverThread()
-             handler.startSenderThread()
-             handler.startReaperThread()
-             handler.startPreProcessingThread()
+             mw.start()
              
              self.mw = mw
              self.configured = True
