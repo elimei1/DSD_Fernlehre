@@ -1,13 +1,12 @@
 import blessed
 import time
-from queue import Empty
+import utils
 
+from queue import Empty
 from middleware import PeerMiddleware
 from ThreadHandler import ThreadHandler
-import utils
 from DeliveryPacketType import DeliveryPacketType
 
-# Constants for layout
 INPUT_HEIGHT = 3
 
 class PeerTUI:
@@ -16,15 +15,10 @@ class PeerTUI:
         self.handler = handler
         self.args = args
         self.configured = middleware is not None
-        
         self.term = blessed.Terminal()
         self.running = True
-        
-        # Chat history buffer
         self.history = []
         self.max_history = 100
-        
-        # User input buffer
         self.input_buffer = []
         self.cursor_pos = 0
         
@@ -35,41 +29,40 @@ class PeerTUI:
              self.prompt = "(Unconfigured) >> "
 
     def run(self):
-        """Main loop for the TUI."""
+        # Main loop
         try:
             print(self.term.enter_fullscreen())
             print(self.term.clear())
             
-            # Initial Welcome Message
+            # Welcome Message
             self.add_system_message(r"  ____  _____  _____ ")
             self.add_system_message(r" |  _ \|  ___||_   _|")
             self.add_system_message(r" | |_) | |___  |  |  ")
             self.add_system_message(r" |  __/| |___  |  |  ")
             self.add_system_message(r" |_|   |_____| |__|  ")
-            self.add_system_message("") # Explicit blank line
+            self.add_system_message("")
             
             if not self.configured:
                  self.add_system_message("System UNCONFIGURED.")
-                 self.add_system_message("Please run /setup to configure Peer ID and Port.")
+                 self.add_system_message("Please run /setup")
             else:
                  self.add_system_message("System Ready.")
 
             # Draw initial layout
             self.draw_layout()
-            
             with self.term.cbreak(), self.term.hidden_cursor():
                 while self.running:
-                    # Check middleware running state if configured
+                    # Check middleware
                     if self.configured and self.mw and not self.mw.running:
                         self.running = False
                         break
-                    # 1. Check for User Input (Non-blocking check)
-                    val = self.term.inkey(timeout=0.05) # Reduced timeout for snappier feel
+                    # Check User Input
+                    val = self.term.inkey(timeout=0.05)
                     if val:
                         self.handle_input(val)
                         self.draw_input_area()
                     
-                    # 2. Check for Incoming Messages from Middleware
+                    # Check Incoming Messages
                     if self.configured and self.check_incoming_messages():
                         self.draw_history()
                         self.draw_input_area()
@@ -78,15 +71,15 @@ class PeerTUI:
             print(self.term.clear())
 
     def draw_layout(self):
-        """Redraws the entire screen."""
+        # Redraws entire screen
         print(self.term.clear())
         
         # Header
         with self.term.location(0, 0):
             if self.configured:
-                header = f" Distributed Systems Dependability - Peer {self.args.id} "
+                header = f" PET - Peer {self.args.id} "
             else:
-                header = " Distributed Systems Dependability - UNCONFIGURED "
+                header = " PET - UNCONFIGURED "
             print(header.center(self.term.width, "="))
             
         # Draw History
@@ -97,35 +90,30 @@ class PeerTUI:
         with self.term.location(0, divider_y):
             print("-" * self.term.width)
             
-        # Help Bar below divider
+        # Help Bar
         with self.term.location(0, divider_y + 1):
              print(" [/setup] Setup | [/help] Help | [/status] Infos | [/quit] Exit")
 
         self.draw_input_area()
 
     def draw_history(self):
-        """Draws the chat history in the top section."""
-        history_height = self.term.height - INPUT_HEIGHT - 3 # Adjusted for help bar
+        history_height = self.term.height - INPUT_HEIGHT - 3
         
-        # Get the last N messages that fit
+        # Messages that fit on screen
         msgs_to_show = self.history[-history_height:]
-        
         with self.term.location(0, 1):
             for i, msg in enumerate(msgs_to_show):
                 print(self.term.clear_eol + msg)
 
     def draw_input_area(self):
-        """Draws the input area at the bottom."""
         input_y = self.term.height - 1
         with self.term.location(0, input_y):
             print(self.term.clear_eol + self.prompt + "".join(self.input_buffer), end="", flush=True)
             
-            # Draw fake cursor
             cursor_x = len(self.prompt) + self.cursor_pos
             print(self.term.move_xy(cursor_x, input_y) + "_", end="", flush=True)
 
     def handle_input(self, val):
-        """Handles a single keypress."""
         if val.is_sequence:
             if val.name == "KEY_ENTER":
                 self.submit_message()
@@ -170,9 +158,28 @@ class PeerTUI:
             self.add_system_message("Available Commands:")
             self.add_system_message("  /status - Show current peer status")
             self.add_system_message("  /quit   - Exit the application")
+            self.add_system_message("  /error  - Inject an error")
             if not self.configured:
                 self.add_system_message("  /setup  - Configure the peer")
             self.add_system_message("  /help   - Show this help message")
+            return
+            
+        if msg.startswith("/error"):
+            parts = msg.split()
+            if len(parts) == 1:
+                # Default 2 2
+                self.mw.error_config = (2, 2)
+                self.add_system_message("Error injection set to MSG_ID=2, BIT_IDX=2")
+            elif len(parts) == 3:
+                try:
+                    msg_id = int(parts[1])
+                    bit_idx = int(parts[2])
+                    self.mw.error_config = (msg_id, bit_idx)
+                    self.add_system_message(f"Error injection set to MSG_ID={msg_id}, BIT_IDX={bit_idx}")
+                except ValueError:
+                    self.add_system_message("Invalid arguments. Usage: /error [msg_id] [bit_idx]")
+            else:
+                 self.add_system_message("Invalid usage. Usage: /error [msg_id] [bit_idx] or just /error")
             return
             
         if not self.configured:
@@ -180,21 +187,13 @@ class PeerTUI:
             return
         
         if msg == "/status":
-            self.add_system_message(f"Status: MyID={self.args.id}, Port={self.args.port}, Peers={len(self.mw.peers)}")
+            err_conf = self.mw.error_config if self.mw.error_config else "None"
+            self.add_system_message(f"Status: MyID={self.args.id}, Port={self.args.port}, Peers={len(self.mw.peers)}, ErrorConfig={err_conf}")
             return
 
-        if hasattr(self.mw, 'send_chat_message'):
-             self.mw.send_chat_message(msg)
-
-        else:
-             self.add_system_message(f"Sending: {msg}")
-             try:
-                 self.mw.send_chat_message(msg)
-             except AttributeError:
-                 self.add_system_message("Error: Middleware.send_chat_message not implemented yet.")
+        self.mw.send_chat_message(msg)
 
     def check_incoming_messages(self):
-        """Checks the middleware's delivery queue for new messages."""
         if not self.configured or not self.mw:
              return False
 
@@ -203,16 +202,12 @@ class PeerTUI:
             while True:
                 deliveryPacket = self.mw.deliveryQueue.get_nowait()
                 
-                # Format message
                 timestamp = time.strftime("%H:%M:%S")
-                # Assuming packet is a Packet object or a tuple with sender info
                 if deliveryPacket.type == DeliveryPacketType.PACKET:
                     packet = deliveryPacket.data
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
                     
-                    # LOGGING (Requirement: UI saves payload to file)
                     if hasattr(self.args, 'log') and self.args.log:
-                        # We need to import utils if not present, but it is imported at top
                         try:
                             utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
                         except Exception as e:
@@ -222,7 +217,7 @@ class PeerTUI:
                     self.add_system_message(deliveryPacket.data)
 
                 else:
-                    display_msg = f"[{timestamp}] {packet}" # Fallback
+                    display_msg = f"[{timestamp}] {packet}"
                 
                 self.add_to_history(display_msg)
                 received = True
@@ -236,22 +231,18 @@ class PeerTUI:
         if len(self.history) > self.max_history:
             self.history.pop(0)
         self.draw_history()
-        # Also redraw input to ensure cursor stays on top
         self.draw_input_area()
 
     def add_system_message(self, text):
         self.add_to_history(self.term.yellow(text))
 
     def read_line(self, prompt_text):
-        """Reads a line of input while in cbreak mode."""
         buffer = []
         
-        # Helper inner function to draw the wizard input line
         def draw_wizard_input():
             input_y = self.term.height - 1
             with self.term.location(0, input_y):
                 print(self.term.clear_eol + prompt_text + "".join(buffer), end="", flush=True)
-                # Cursor
                 cursor_x = len(prompt_text) + len(buffer)
                 print(self.term.move_xy(cursor_x, input_y) + "_", end="", flush=True)
 
@@ -272,11 +263,10 @@ class PeerTUI:
                 draw_wizard_input()
 
     def command_setup(self):
-        """Interactive setup wizard."""
         try:
              self.add_system_message("--- SETUP WIZARD ---")
              
-             # 1. Peer ID
+             # Peer ID
              while True:
                  str_id = self.read_line("Enter Peer ID (int): ")
                  if str_id.isdigit():
@@ -284,7 +274,7 @@ class PeerTUI:
                      break
                  self.add_system_message("Invalid ID. Please enter a number.")
              
-             # 2. Port
+             # Port
              while True:
                  str_port = self.read_line("Enter Port (int): ")
                  if str_port.isdigit():
@@ -292,40 +282,37 @@ class PeerTUI:
                      break
                  self.add_system_message("Invalid Port. Please enter a number.")
              
-             # 3. Peers File
+             # Peers File
              while True:
                  peers_file = self.read_line("Enter Peers File [peers.txt]: ")
                  if not peers_file.strip():
                      peers_file = "peers.txt"
-                 # Verify?
                  try:
                      peers = utils.load_peer_config(peers_file)
                      break
                  except Exception as e:
                      self.add_system_message(f"Error loading file: {e}")
              
-             # 4. Initialize
-             self.add_system_message("Initializing Middleware...")
+             # Initialize
+             self.add_system_message("Initializing Middleware")
              
-             # Mock Args if needed or update self.args
-             # We create a simple object to hold args
              class Args:
                  pass
              new_args = Args()
              new_args.id = peer_id
              new_args.port = port
              new_args.peers = peers_file
-             new_args.log = f"peer{peer_id}.log" # Auto-gen log name
+             new_args.log = f"peer{peer_id}.log"
              new_args.error_msg_id = None
              new_args.error_bit_idx = None
              
              self.args = new_args
              
-             # Init Middleware
+             # Actually init middleware
              mw = PeerMiddleware(peer_id, port, peers, None)
              mw.log_file = new_args.log
              
-             # Init Handler
+             # Init handler
              mw.start()
              
              self.mw = mw

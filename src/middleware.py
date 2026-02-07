@@ -44,7 +44,8 @@ class PeerMiddleware:
         self.transactionList = []
         self.reaper_sleep_time = 0.5
         self.running = True
-        self.injected_errors = None
+        self.injected_errors = set()
+        self.received_messages = set()
         self.threadhandler = ThreadHandler(self)
 
     def start(self):
@@ -139,7 +140,7 @@ class PeerMiddleware:
                 break
             
             if self.error_config:
-                inject_error(data)
+                self.inject_error(data)
 
             # --- Checksum Validation ---
             if not cs.validate_checksum(data):

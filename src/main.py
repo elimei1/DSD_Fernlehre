@@ -1,13 +1,12 @@
 import argparse
 import sys
-
 from middleware import PeerMiddleware
 from tui import PeerTUI
 from utils import load_peer_config
 
 
 def main():
-    # 1. Argument Parsing (Bleibt in main.py)
+    # Argument Parsing
     parser = argparse.ArgumentParser(description="P2P Chat with Error Injection")
     parser.add_argument("--id", type=int, required=False, help="Peer ID")
     parser.add_argument("--port", type=int, required=False, help="Own Port")
@@ -25,7 +24,7 @@ def main():
     mw = None
     handler = None
 
-    # 2. Initialisierung der Middleware
+    # Init Middleware
     if args.id and args.port and args.peers and args.log:
         peers = load_peer_config(args.peers)
         error_config = (
@@ -34,11 +33,8 @@ def main():
         )
 
         try:
-            # Middleware-Instanz erstellen
             mw = PeerMiddleware(args.id, args.port, peers, error_config)
             mw.log_file = args.log
-
-            # Hintergrund-Threads über den ThreadHandler starten
             mw.start()
 
             print(f"Middleware for Peer {args.id} initialized and threads started.")
@@ -46,30 +42,28 @@ def main():
             print(f"Failed to initialize Middleware: {e}")
             sys.exit(1)
     else:
-        print("Starting in UNCONFIGURED mode. Please run /setup in the TUI.")
+        print("UNCONFIGURED mode. Please run /setup")
         mw = None
         handler = None
 
-    # 3. Start der TUI
+    # Start tui
     try:
-        # Wir übergeben das Middleware-Objekt an die TUI
         tui = PeerTUI(mw, args)
         tui.run()
     except KeyboardInterrupt:
-        print("\nExiting (KeyboardInterrupt)...")
+        print("\nExiting (KeyboardInterrupt)")
     except Exception as e:
         import traceback
         print("\nCRITICAL ERROR in TUI:")
         traceback.print_exc()
     finally:
-        # 4. Cleanup
-        # Prioritize handler from TUI if it was created dynamically
+        # Cleanup
         active_handler = tui.handler if 'tui' in locals() and tui and tui.handler else handler
         
         if active_handler:
-            print("Shutting down threads...")
+            print("Shutting down threads")
             active_handler.shutdown()
-        print("Cleanup done.")
+        print("Cleanup done")
 
 
 if __name__ == "__main__":
