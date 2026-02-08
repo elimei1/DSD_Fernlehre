@@ -9,6 +9,8 @@ from Args import Args
 
 INPUT_HEIGHT = 3
 
+''' Terminal UI '''
+''' Text only english '''
 class PeerTUI:
     def __init__(self, middleware, args, handler=None):
         self.mw = middleware
@@ -113,6 +115,7 @@ class PeerTUI:
             cursor_x = len(self.prompt) + self.cursor_pos
             print(self.term.move_xy(cursor_x, input_y) + "_", end="", flush=True)
 
+    ''' Handle user input with arbitrary payload'''
     def handle_input(self, val):
         if val.is_sequence:
             if val.name == "KEY_ENTER":
@@ -168,6 +171,7 @@ class PeerTUI:
             parts = msg.split()
             if len(parts) == 1:
                 # Default 2 2
+                ''' Error Injection on message ID and bit index '''
                 self.mw.setErrorInjectionConfig((2, 2))
                 self.add_system_message("Error injection set to MSG_ID=2, BIT_IDX=2")
             elif len(parts) == 3:
@@ -208,6 +212,12 @@ class PeerTUI:
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
                     self.add_to_history(display_msg)
                     received = True
+                    ''' Log message to file '''
+                    if hasattr(self.args, 'log') and self.args.log:
+                        try:
+                            utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
+                        except Exception as e:
+                            self.add_system_message(f"Log Error: {e}")
 
                 elif deliveryPacket.type == DeliveryPacketType.SYSTEM_MESSAGE:
                     self.add_system_message(deliveryPacket.data)
@@ -262,6 +272,7 @@ class PeerTUI:
              self.add_system_message("--- SETUP WIZARD ---")
              
              # Peer ID
+             ''' Unique Peer-ID per Peer over setup config'''
              while True:
                  if self.args.peerID:
                     str_id = self.read_line(f"Current Peer ID is {self.args.peerID}. Enter new Peer ID (leave empty to keep current): ")
@@ -288,6 +299,8 @@ class PeerTUI:
                  self.add_system_message("Invalid Port. Please enter a number.")
              
              # Peers File
+             ''' List of Peer-IDs with Port and IP '''
+             ''' Default group size of 5 peers '''
              while True:
                  if self.args.peers:
                      peers_file = self.read_line(f"Current peers file location is {self.args.port}. Enter new port (leave empty to keep current): ")

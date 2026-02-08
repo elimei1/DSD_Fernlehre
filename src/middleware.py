@@ -22,6 +22,7 @@ from RelayPacketElement import RelayPacketElement
 
 class PeerMiddleware:
     TIMEOUT_TIME = 1.0
+    ''' max three retries '''
     MAX_RETRIES = 3
     RECV_BYTES = 4096
     PROTECTION_MAX_TIME = 600 # 10 min
@@ -32,7 +33,7 @@ class PeerMiddleware:
         self.peers = self.args.peers # Dict: {id: [ip, port]}
         self.log_file = self.args.log
 
-        # UDP Socket Setup [cite: 12, 32]
+        # UDP Socket Setup
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('0.0.0.0', self.args.port))
         self.sock.settimeout(1.0)
@@ -55,7 +56,6 @@ class PeerMiddleware:
         self.injectionSetFlag.clear()
 
         self.active_batches = {} # batch_id -> {total, success, fail}
-
         self.threadhandler = ThreadHandler(self)
 
     def start(self):
@@ -98,9 +98,10 @@ class PeerMiddleware:
                         }
 
                     # Create one packet per peer
+                    ''' Closed Group - send also to myself '''
                     for peerID in self.peers:
                         temp_transaction = deepcopy(transaction)
-                        temp_transaction.batch_id = transaction.batch_id # Ensure deepcopy keeps it? Dataclass should copy.
+                        temp_transaction.batch_id = transaction.batch_id # bundle messages
                         temp_transaction.destination = self.peers[peerID][0], self.peers[peerID][1]
                         self.outboundPacketQueue.put(temp_transaction)
 
@@ -222,6 +223,7 @@ class PeerMiddleware:
             currentTime = time.time()
             for transaction in self.transactionList[:]:
                 if (currentTime - transaction.timestamp) > PeerMiddleware.TIMEOUT_TIME:
+                    ''' Validity - Stop-and-Wait ARQ'''
                     if transaction.retries < PeerMiddleware.MAX_RETRIES:
                         # Retransmit
                         transaction.transactionType = TransactionType.RETRANSMIT

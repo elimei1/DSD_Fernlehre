@@ -9,6 +9,8 @@ from utils import load_peer_config
 
 def main():
     # Argument Parsing
+    ''' arguments when starting over "python main.py --id <peer_id> --port <port> --peers <peers_file> --log <log_file>" '''
+    ''' for docker set with /setup '''
     parser = argparse.ArgumentParser(description="P2P Chat with Error Injection")
     parser.add_argument("--id", type=str, required=False, help="Peer ID")
     parser.add_argument("--port", type=int, required=False, help="Own Port")

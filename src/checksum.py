@@ -1,3 +1,4 @@
+''' checksum self implemented '''
 def internet_checksum(data: bytes) -> int:
     if len(data) % 2 == 1:
         data += b"\x00"
