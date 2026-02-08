@@ -24,6 +24,7 @@ class PeerMiddleware:
     TIMEOUT_TIME = 1.0
     MAX_RETRIES = 3
     RECV_BYTES = 4096
+    PROTECTION_MAX_TIME = 600 # 10 min
 
     def __init__(self):
         self.args = Args()
@@ -237,6 +238,11 @@ class PeerMiddleware:
                              self.check_batch_complete(transaction.batch_id)
 
                     self.transactionList.remove(transaction)
+
+            for element in self.relayPacketList[:]:
+                if (currentTime - element.timestamp) > PeerMiddleware.PROTECTION_MAX_TIME:
+                    self.relayPacketList.remove(element)
+
             time.sleep(self.reaper_sleep_time)
 
     def check_batch_complete(self, batch_id):
