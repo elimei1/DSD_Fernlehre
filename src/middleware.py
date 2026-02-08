@@ -4,6 +4,7 @@ import time
 import queue
 import checksum as cs
 import utils as utils
+import uuid
 
 from copy import deepcopy
 from ThreadHandler import ThreadHandler
@@ -51,6 +52,8 @@ class PeerMiddleware:
         self.injected_errors = set()
         self.injectionSetFlag = threading.Event()
         self.injectionSetFlag.clear()
+        
+        self.active_batches = {} # batch_id -> {total, success, fail}
 
         self.threadhandler = ThreadHandler(self)
 
@@ -73,6 +76,7 @@ class PeerMiddleware:
         pkt.setPayload(text)
 
         transaction = Transaction(packet=pkt, transactionType=TransactionType.DATA)
+        transaction.batch_id = str(uuid.uuid4())
         # Put into preProcessingQueue
         self.preProcessingQueue.put(transaction)
 
@@ -83,9 +87,19 @@ class PeerMiddleware:
 
                 if transaction.transactionType == TransactionType.DATA:
                     transaction.packet.setSenderID(self.my_id)
+                    
+                    # Init batch tracking
+                    if transaction.batch_id:
+                        self.active_batches[transaction.batch_id] = {
+                            'total': len(self.peers),
+                            'success': 0,
+                            'fail': 0
+                        }
+
                     # Create one packet per peer
                     for peerID in self.peers:
                         temp_transaction = deepcopy(transaction)
+                        temp_transaction.batch_id = transaction.batch_id # Ensure deepcopy keeps it? Dataclass should copy.
                         temp_transaction.destination = self.peers[peerID][0], self.peers[peerID][1]
                         temp_transaction.packet.setSequenceNumber(self.peers[peerID][2].getSeqNum())
                         self.outboundPacketQueue.put(temp_transaction)
@@ -96,6 +110,12 @@ class PeerMiddleware:
 
                 elif transaction.transactionType == TransactionType.RETRANSMIT:
                     transaction.retries += 1
+                    if self.log_file:
+                        msg = f"Timeout! Retrying packet to {transaction.destination} (Attempt {transaction.retries}/{PeerMiddleware.MAX_RETRIES})"
+                        utils.log_message(self.log_file, "SYSTEM", "RETRY", msg)
+                    
+                    # Queue for sending
+                    self.outboundPacketQueue.put(transaction)
 
                 elif transaction.transactionType == TransactionType.RELAY:
                     packet = Packet().setSenderID(self.my_id).setPayload(transaction.packet.getPayload())
@@ -178,6 +198,11 @@ class PeerMiddleware:
                     utils.log_message(self.log_file, "SYSTEM", "ACK",
                                       f"transaction {transaction.destination} and seq {transaction.packet.sequence_number}")
                     if transaction.destination == addr and transaction.packet.sequence_number == packet.getSequenceNumber():
+                        # Batch Success
+                        if transaction.batch_id and transaction.batch_id in self.active_batches:
+                             self.active_batches[transaction.batch_id]['success'] += 1
+                             self.check_batch_complete(transaction.batch_id)
+                        
                         self.transactionList.remove(transaction)
                         break
                 else:
@@ -206,8 +231,29 @@ class PeerMiddleware:
                         # Retransmit
                         transaction.transactionType = TransactionType.RETRANSMIT
                         self.preProcessingQueue.put(transaction)
+                    else:
+                        # Max retries reached
+                        msg = f"Message to {transaction.destination} failed after {PeerMiddleware.MAX_RETRIES} attempts."
+                        if self.log_file:
+                             utils.log_message(self.log_file, "SYSTEM", "DROP", msg)
+
+                        # Batch Fail
+                        if transaction.batch_id and transaction.batch_id in self.active_batches:
+                             self.active_batches[transaction.batch_id]['fail'] += 1
+                             self.check_batch_complete(transaction.batch_id)
+
                     self.transactionList.remove(transaction)
             time.sleep(self.reaper_sleep_time)
+
+    def check_batch_complete(self, batch_id):
+        if batch_id not in self.active_batches:
+            return
+
+        batch = self.active_batches[batch_id]
+        if batch['success'] + batch['fail'] == batch['total']:
+             msg = f"[Status] {batch['success']}/{batch['total']}"
+             self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE))
+             del self.active_batches[batch_id]
 
     def checkIfInjectionPacket(self, data) -> bytes:
         target_msg_id, bit_idx = self.injected_errors
@@ -215,11 +261,18 @@ class PeerMiddleware:
 
         if packet.getSequenceNumber() == target_msg_id:
             # Identify Packet Type (Byte 0)
-            msg = f"Simulating Bit-Flip on {packet.getPacketType()} Msg {packet.getSequenceNumber()}..."
+            msg = f"Simulating Bit-Flip on Msg {packet.getSequenceNumber()}"
             if self.log_file:
                 utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", msg)
             self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE))  # Notify TUI
 
             self.injectionSetFlag.clear()
-            return inject_error(data, bit_idx)
+            injected_data, detail_msg = inject_error(data, bit_idx)
+            
+            # Log detail message
+            if self.log_file:
+                utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", detail_msg)
+            self.deliveryQueue.put(DeliveryPacket(data=f"[Injection] {detail_msg}", type=DeliveryPacketType.SYSTEM_MESSAGE))
+            
+            return injected_data
         return data

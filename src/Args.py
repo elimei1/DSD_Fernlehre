@@ -3,7 +3,7 @@ class Args:
     _instance = None
 
     def __init__(self, peerID=None, port=None, peers=None, log=None):
-        if self._initialized:
+        if getattr(self, '_initialized', False):
             return
 
         self._initialized = True

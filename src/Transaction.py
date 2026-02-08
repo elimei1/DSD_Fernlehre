@@ -11,3 +11,4 @@ class Transaction:
     destination: tuple[str, int] = tuple()
     timestamp: float = -1.0
     retries: int = -1
+    batch_id: str = None

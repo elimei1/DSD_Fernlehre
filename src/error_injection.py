@@ -1,4 +1,4 @@
-def inject_error(raw_data: bytes, bit_index: int) -> bytes:
+def inject_error(raw_data: bytes, bit_index: int) -> tuple[bytes, str]:
     # convert to bytearray
     data = bytearray(raw_data)
     
@@ -10,9 +10,12 @@ def inject_error(raw_data: bytes, bit_index: int) -> bytes:
     
     if byte_index >= len(data):
         print(f"Index {bit_index} out of range. No error injected.")
-        return raw_data
+        return raw_data, "Index out of range"
 
     # Bit toggle (XOR with mask)
+    original_byte = data[byte_index]
     data[byte_index] ^= (1 << bit_within_byte)
+    new_byte = data[byte_index]
     
-    return bytes(data)
+    msg = f"Bit flip at index {bit_index} (Byte {byte_index}, Bit {bit_within_byte}): 0x{original_byte:02X} -> 0x{new_byte:02X}"
+    return bytes(data), msg

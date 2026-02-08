@@ -168,13 +168,13 @@ class PeerTUI:
             parts = msg.split()
             if len(parts) == 1:
                 # Default 2 2
-                self.mw.error_config = (2, 2)
+                self.mw.setErrorInjectionConfig((2, 2))
                 self.add_system_message("Error injection set to MSG_ID=2, BIT_IDX=2")
             elif len(parts) == 3:
                 try:
                     msg_id = int(parts[1])
                     bit_idx = int(parts[2])
-                    self.mw.error_config = (msg_id, bit_idx)
+                    self.mw.setErrorInjectionConfig((msg_id, bit_idx))
                     self.add_system_message(f"Error injection set to MSG_ID={msg_id}, BIT_IDX={bit_idx}")
                 except ValueError:
                     self.add_system_message("Invalid arguments. Usage: /error [msg_id] [bit_idx]")
@@ -187,7 +187,7 @@ class PeerTUI:
             return
         
         if msg == "/status":
-            err_conf = self.mw.error_config if self.mw.error_config else "None"
+            err_conf = self.mw.injected_errors if self.mw.injectionSetFlag.is_set() else "None"
             self.add_system_message(f"Status: MyID={self.args.peerID}, Port={self.args.port}, Peers={len(self.mw.peers)}, ErrorConfig={err_conf}")
             return
 
@@ -275,7 +275,7 @@ class PeerTUI:
                  else:
                      str_id = self.read_line(f"Enter Peer ID (int): ")
                  if str_id.isdigit():
-                     Args.peerID = int(str_id)
+                     self.args.peerID = int(str_id)
                      break
                  self.add_system_message("Invalid ID. Please enter a number.")
              
@@ -288,7 +288,7 @@ class PeerTUI:
                  else:
                     str_port = self.read_line("Enter Port (int): ")
                  if str_port.isdigit():
-                     Args.port = int(str_port)
+                     self.args.port = int(str_port)
                      break
                  self.add_system_message("Invalid Port. Please enter a number.")
              
@@ -303,7 +303,7 @@ class PeerTUI:
                  if not peers_file.strip():
                      peers_file = "peers.txt"
                  try:
-                     Args.peers = utils.load_peer_config(peers_file)
+                     self.args.peers = utils.load_peer_config(peers_file)
                      break
                  except Exception as e:
                      self.add_system_message(f"Error loading file: {e}")
@@ -311,9 +311,7 @@ class PeerTUI:
              # Initialize
              self.add_system_message("Initializing Middleware")
 
-             Args.log = f"peer{self.args.peerID}.log"
-             #new_args.error_msg_id = None
-             #new_args.error_bit_idx = None
+             self.args.log = f"peer{self.args.peerID}.log"
 
              # Actually init middleware
              self.mw = PeerMiddleware()
