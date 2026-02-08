@@ -206,7 +206,8 @@ class PeerTUI:
                 if deliveryPacket.type == DeliveryPacketType.PACKET:
                     packet = deliveryPacket.data
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
-                    
+                    self.add_to_history(display_msg)
+                    received = True
                     if hasattr(self.args, 'log') and self.args.log:
                         try:
                             utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
@@ -218,9 +219,8 @@ class PeerTUI:
 
                 else:
                     display_msg = f"[{timestamp}] {packet}"
-                
-                self.add_to_history(display_msg)
-                received = True
+                    self.add_to_history(display_msg)
+                    received = True
                 
         except Empty:
             pass

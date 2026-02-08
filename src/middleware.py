@@ -79,11 +79,14 @@ class PeerMiddleware:
                         temp_transaction.destination = self.peers[peerID][0], self.peers[peerID][1]
                         temp_transaction.packet.setSequenceNumber(self.peers[peerID][2].getSeqNum())
                         self.outboundPacketQueue.put(temp_transaction)
+
                 elif transaction.transactionType == TransactionType.ACK:
                     transaction.packet.setAck().setSenderID(self.my_id)
                     self.outboundPacketQueue.put(transaction)
+
                 elif transaction.transactionType == TransactionType.RETRANSMIT:
                     transaction.retries += 1
+
                 elif transaction.transactionType == TransactionType.RELAY:
                     packet = Packet().setSenderID(self.my_id).setPayload(transaction.packet.getPayload())
                     transaction_copy = Transaction(packet=packet, transactionType=TransactionType.DATA)
@@ -191,9 +194,9 @@ class PeerMiddleware:
                 if (currentTime - transaction.timestamp) > PeerMiddleware.TIMEOUT_TIME:
                     if transaction.retries < PeerMiddleware.MAX_RETRIES:
                         # Retransmit
+                        transaction.transactionType = TransactionType.RETRANSMIT
                         self.preProcessingQueue.put(transaction)
-                    else:
-                        self.transactionList.remove(transaction)
+                    self.transactionList.remove(transaction)
             time.sleep(self.reaper_sleep_time)
 
     def inject_error(self, data):
