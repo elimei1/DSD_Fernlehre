@@ -172,8 +172,8 @@ class PeerTUI:
             if len(parts) == 1:
                 # Default 2 2
                 ''' Error Injection on message ID and bit index '''
-                self.mw.setErrorInjectionConfig((2, 2))
-                self.add_system_message("Error injection set to MSG_ID=2, BIT_IDX=2")
+                self.mw.setErrorInjectionConfig(("peer_12", 2))
+                self.add_system_message("Error injection set to peerID=peer_1, MSG_ID=2, BIT_IDX=2")
             elif len(parts) == 3:
                 try:
                     msg_id = parts[1]
