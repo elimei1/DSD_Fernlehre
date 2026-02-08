@@ -279,11 +279,7 @@ class PeerTUI:
                     if str_id == "":
                         break
                  else:
-                     str_id = self.read_line(f"Enter Peer ID (int): ")
-                 if str_id.isdigit():
-                     self.args.peerID = str_id
-                     break
-                 self.add_system_message("Invalid ID. Please enter a number.")
+                     str_id = self.read_line(f"Enter Peer ID: ")
              
              # Port
              while True:
