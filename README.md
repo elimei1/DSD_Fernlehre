@@ -51,9 +51,13 @@ Wenn die Applikation über Docker gestartet wird, muss ein Peer zuerst über den
 _Dafür müssen die IDs und Ports genau so eingegeben werden wie sie im peers.txt stehen.Eine Abweichung führt zu einem nicht erlaubtem Fehler._
 
 ID: peer_1, Port: 5001, Liste: peers.txt
+
 ID: peer_2, Port: 5002, Liste: peers.txt
+
 ID: peer_3, Port: 5003, Liste: peers.txt
+
 ID: peer_4, Port: 5004, Liste: peers.txt
+
 ID: peer_5, Port: 5005, Liste: peers.txt
 
 ### Chatten
