@@ -29,7 +29,7 @@ services:
       peer-network:
         ipv4_address: 172.20.0.11
     environment:
-      - ID=1
+      - ID=peer_1
       - PORT=5001
       - LOG=peer1.log
 
@@ -40,7 +40,7 @@ services:
       peer-network:
         ipv4_address: 172.20.0.12
     environment:
-      - ID=2
+      - ID=peer_2
       - PORT=5002
       - LOG=peer2.log
 
@@ -51,7 +51,7 @@ services:
       peer-network:
         ipv4_address: 172.20.0.13
     environment:
-      - ID=3
+      - ID=peer_3
       - PORT=5003
       - LOG=peer3.log
 
@@ -62,7 +62,7 @@ services:
       peer-network:
         ipv4_address: 172.20.0.14
     environment:
-      - ID=4
+      - ID=peer_4
       - PORT=5004
       - LOG=peer4.log
 
@@ -73,7 +73,7 @@ services:
       peer-network:
         ipv4_address: 172.20.0.15
     environment:
-      - ID=5
+      - ID=peer_5
       - PORT=5005
       - LOG=peer5.log
 

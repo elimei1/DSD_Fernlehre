@@ -94,7 +94,7 @@ class PeerTUI:
             
         # Help Bar
         with self.term.location(0, divider_y + 1):
-             print(" [/setup] Setup | [/help] Help | [/status] Infos | [/quit] Exit")
+             print(" [/setup] Setup | [/help] Help | [/status] Infos | [/error] inject error | [/quit] Exit")
 
         self.draw_input_area()
 
@@ -212,12 +212,6 @@ class PeerTUI:
                     display_msg = f"[{timestamp}] [Peer {packet.sender_id}] {packet.payload}"
                     self.add_to_history(display_msg)
                     received = True
-                    ''' Log message to file '''
-                    if hasattr(self.args, 'log') and self.args.log:
-                        try:
-                            utils.log_message(self.args.log, packet.sender_id, packet.sequence_number, packet.payload)
-                        except Exception as e:
-                            self.add_system_message(f"Log Error: {e}")
 
                 elif deliveryPacket.type == DeliveryPacketType.SYSTEM_MESSAGE:
                     self.add_system_message(deliveryPacket.data)

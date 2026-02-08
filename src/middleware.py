@@ -290,8 +290,9 @@ class PeerMiddleware:
     def checkIfInjectionPacket(self, data):
         target_msg_id, bit_idx = self.injected_errors
         packet = Packet.from_bytes(data)
-
-        if str(packet.getSenderID) + str(packet.getSequenceNumber()) == target_msg_id:
+        msg = f"sanity check {str(packet.getSenderID()) + str(packet.getSequenceNumber())}  {target_msg_id}"
+        utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", packet.getSequenceNumber(), msg, packet)
+        if str(packet.getSenderID()) + str(packet.getSequenceNumber()) == target_msg_id:
             # Identify Packet Type (Byte 0)
             msg = f"Simulating Bit-Flip on packet with sequence number {target_msg_id} at bit {bit_idx}"
             utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", packet.getSequenceNumber(), msg, packet)

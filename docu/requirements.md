@@ -3,10 +3,10 @@ configuration file: containing all Peer-IDs and their corresponding IP-Addresses
 
 # General connection
 
-* Peers must be able to receive their own messages
-* Peers must not be able to receive messages from sources outside the group
+* + Peers must be able to receive their own messages
+* + Peers must not be able to receive messages from sources outside the group
 
-* Peers must have a unique Peer-ID
+* + Peers must have a unique Peer-ID
 * Users must be able to configure the Peer-ID via a command line argument
 * Peers must not be able to detect and handle multiple Peers with the same Peer-ID
 
@@ -34,7 +34,7 @@ configuration file: containing all Peer-IDs and their corresponding IP-Addresses
 
 * The UI must be able to save received payload, including the message-ID, in the order of receiving in a log file
 
-* The UI must be able to parse the configuration file and change the config
+* The UI must be able to parse the configuration file and change the config (peers.txt)
 
 * The UI must be able to accept the following flags on startup:
   * Peer-ID of the peer
