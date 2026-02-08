@@ -81,6 +81,9 @@ class Packet:
             self.senderID_length,
         )
 
+    def getPacketType(self):
+        return self.packetType
+
     def isData(self):
         return self.packetType == PacketType.DATA
 

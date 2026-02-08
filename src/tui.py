@@ -4,8 +4,8 @@ import utils
 
 from queue import Empty
 from middleware import PeerMiddleware
-from ThreadHandler import ThreadHandler
 from DeliveryPacketType import DeliveryPacketType
+from Args import Args
 
 INPUT_HEIGHT = 3
 
@@ -13,7 +13,7 @@ class PeerTUI:
     def __init__(self, middleware, args, handler=None):
         self.mw = middleware
         self.handler = handler
-        self.args = args
+        self.args = Args()
         self.configured = middleware is not None
         self.term = blessed.Terminal()
         self.running = True
@@ -23,8 +23,8 @@ class PeerTUI:
         self.cursor_pos = 0
         
         # Prompt
-        if self.configured and args:
-             self.prompt = f"(Peer {args.id}) >> "
+        if self.configured and self.args:
+             self.prompt = f"(Peer {self.args.peerID}) >> "
         else:
              self.prompt = "(Unconfigured) >> "
 
@@ -77,7 +77,7 @@ class PeerTUI:
         # Header
         with self.term.location(0, 0):
             if self.configured:
-                header = f" PET - Peer {self.args.id} "
+                header = f" PET - Peer {self.args.peerID} "
             else:
                 header = " PET - UNCONFIGURED "
             print(header.center(self.term.width, "="))
@@ -188,7 +188,7 @@ class PeerTUI:
         
         if msg == "/status":
             err_conf = self.mw.error_config if self.mw.error_config else "None"
-            self.add_system_message(f"Status: MyID={self.args.id}, Port={self.args.port}, Peers={len(self.mw.peers)}, ErrorConfig={err_conf}")
+            self.add_system_message(f"Status: MyID={self.args.peerID}, Port={self.args.port}, Peers={len(self.mw.peers)}, ErrorConfig={err_conf}")
             return
 
         self.mw.send_chat_message(msg)
@@ -268,59 +268,64 @@ class PeerTUI:
              
              # Peer ID
              while True:
-                 str_id = self.read_line("Enter Peer ID (int): ")
+                 if self.args.peerID:
+                    str_id = self.read_line(f"Current Peer ID is {self.args.peerID}. Enter new Peer ID (leave empty to keep current): ")
+                    if str_id == "":
+                        break
+                 else:
+                     str_id = self.read_line(f"Enter Peer ID (int): ")
                  if str_id.isdigit():
-                     peer_id = int(str_id)
+                     Args.peerID = int(str_id)
                      break
                  self.add_system_message("Invalid ID. Please enter a number.")
              
              # Port
              while True:
-                 str_port = self.read_line("Enter Port (int): ")
+                 if self.args.port:
+                     str_port = self.read_line(f"Current port is {self.args.port}. Enter new port (leave empty to keep current): ")
+                     if str_port == "":
+                         break
+                 else:
+                    str_port = self.read_line("Enter Port (int): ")
                  if str_port.isdigit():
-                     port = int(str_port)
+                     Args.port = int(str_port)
                      break
                  self.add_system_message("Invalid Port. Please enter a number.")
              
              # Peers File
              while True:
-                 peers_file = self.read_line("Enter Peers File [peers.txt]: ")
+                 if self.args.peers:
+                     peers_file = self.read_line(f"Current peers file location is {self.args.port}. Enter new port (leave empty to keep current): ")
+                     if peers_file == "":
+                         break
+                 else:
+                    peers_file = self.read_line("Enter Peers File [peers.txt]: ")
                  if not peers_file.strip():
                      peers_file = "peers.txt"
                  try:
-                     peers = utils.load_peer_config(peers_file)
+                     Args.peers = utils.load_peer_config(peers_file)
                      break
                  except Exception as e:
                      self.add_system_message(f"Error loading file: {e}")
              
              # Initialize
              self.add_system_message("Initializing Middleware")
-             
-             class Args:
-                 pass
-             new_args = Args()
-             new_args.id = peer_id
-             new_args.port = port
-             new_args.peers = peers_file
-             new_args.log = f"peer{peer_id}.log"
-             new_args.error_msg_id = None
-             new_args.error_bit_idx = None
-             
-             self.args = new_args
-             
+
+             Args.log = f"peer{self.args.peerID}.log"
+             #new_args.error_msg_id = None
+             #new_args.error_bit_idx = None
+
              # Actually init middleware
-             mw = PeerMiddleware(peer_id, port, peers, None)
-             mw.log_file = new_args.log
+             self.mw = PeerMiddleware()
              
              # Init handler
-             mw.start()
-             
-             self.mw = mw
+             self.mw.start()
+
              self.configured = True
-             self.prompt = f"(Peer {peer_id}) >> "
+             self.prompt = f"(Peer {self.args.peerID}) >> "
              
              self.add_system_message("Setup Complete! System is now running.")
-             self.add_system_message(f"Logging to {new_args.log}")
+             self.add_system_message(f"Logging to {self.args.log}")
              
         except Exception as e:
             self.add_system_message(f"Setup Failed: {e}")
