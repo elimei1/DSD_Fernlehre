@@ -94,7 +94,7 @@ class PeerTUI:
             
         # Help Bar
         with self.term.location(0, divider_y + 1):
-             print(" [/setup] Setup | [/help] Help | [/status] Infos | [/error] inject error | [/quit] Exit")
+             print(" [/setup] Setup | [/error] Error | [/help] Help | [/status] Infos | [/quit] Exit")
 
         self.draw_input_area()
 
