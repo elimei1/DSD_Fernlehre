@@ -1,6 +1,8 @@
 import argparse
 import sys
 from middleware import PeerMiddleware
+from Args import Args
+import utils
 from tui import PeerTUI
 from utils import load_peer_config
 
@@ -33,8 +35,13 @@ def main():
         )
 
         try:
-            mw = PeerMiddleware(args.id, args.port, peers, error_config)
-            mw.log_file = args.log
+            arguments = Args()
+            arguments.peerID = int(args.id)
+            arguments.port = int(args.port)
+            arguments.peers = utils.load_peer_config(args.peers)
+            arguments.log = args.log
+
+            mw = PeerMiddleware()
             mw.start()
 
             print(f"Middleware for Peer {args.id} initialized and threads started.")

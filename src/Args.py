@@ -1,6 +1,14 @@
+from dataclasses import dataclass, field
 
+
+@dataclass
 class Args:
     _instance = None
+
+    peerID: int = -1
+    port: int = -1
+    peers: dict = field(default_factory=dict)
+    log: str = ""
 
     def __init__(self, peerID=None, port=None, peers=None, log=None):
         if getattr(self, '_initialized', False):

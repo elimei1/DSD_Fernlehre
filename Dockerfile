@@ -11,5 +11,5 @@ COPY peers.txt .
 ENV PYTHONUNBUFFERED=1
 
 # Start a tmux session named "peer", run the script, and stay alive
-#CMD ["sh", "-c", "tmux new-session -d -s peer 'python main.py --id $ID --port $PORT --peers peers.txt --log $LOG'; tmux attach-session -t peer"]
-CMD ["sh", "-c", "tmux new-session -d -s peer 'python main.py'; tmux attach-session -t peer"]
+CMD ["sh", "-c", "tmux new-session -d -s peer 'python main.py --id $ID --port $PORT --peers peers.txt --log $LOG'; tmux attach-session -t peer"]
+#CMD ["sh", "-c", "tmux new-session -d -s peer 'python main.py'; tmux attach-session -t peer"]

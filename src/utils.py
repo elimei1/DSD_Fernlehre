@@ -25,11 +25,11 @@ def load_peer_config(filepath):
 
 import datetime
 
-def log_message(filepath, sender_id, msg_id, payload):
+def log_message(filepath, sender_id, msg_type, msg_id, msg, payload):
     # Saves received messages to a file[cite: 43]
     try:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] [Peer {sender_id}] [MsgID {msg_id}] {payload}\n"
+        log_entry = f"[{timestamp}] [Peer {sender_id}] [Type {msg_type}] [Sqn-N {msg_id}] {msg}: {payload}\n"
         
         with open(filepath, 'a', encoding='utf-8') as f:
             f.write(log_entry)
