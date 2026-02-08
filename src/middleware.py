@@ -18,6 +18,7 @@ from DeliveryPacketType import DeliveryPacketType
 from DeliveryPackets import DeliveryPacket
 from Args import Args
 from RelayPacketElement import RelayPacketElement
+from SentPacketElement import SentPacketElement
 
 
 class PeerMiddleware:
@@ -26,6 +27,7 @@ class PeerMiddleware:
     MAX_RETRIES = 3
     RECV_BYTES = 4096
     PROTECTION_MAX_TIME = 600 # 10 min
+    WAIT_BETWEEN_SENDS = 1
 
     def __init__(self):
         self.args = Args()
@@ -39,14 +41,16 @@ class PeerMiddleware:
         self.sock.settimeout(1.0)
 
         self.seqNumGenerator = SeqNumGenerator()
+        self.arqEvents = {}
         for peerID in self.peers:
-            self.peers[peerID].append(SeqNumGenerator())
+            self.arqEvents[str(self.peers[peerID][0]) + str(self.peers[peerID][1])] = threading.Event
 
         self.deliveryQueue = queue.Queue() # for messages received
         self.outboundPacketQueue = queue.Queue() # for messages to be sent
         self.preProcessingQueue = queue.Queue()
         self.transactionList = []
         self.relayPacketList = []
+        self.sentPacketList = []
 
         self.reaper_sleep_time = 0.5
         self.running = True
@@ -111,9 +115,8 @@ class PeerMiddleware:
 
                 elif transaction.transactionType == TransactionType.RETRANSMIT:
                     transaction.retries += 1
-                    if self.log_file:
-                        msg = f"Timeout! Retrying packet to {transaction.destination} (Attempt {transaction.retries}/{PeerMiddleware.MAX_RETRIES})"
-                        utils.log_message(self.log_file, "SYSTEM", "RETRY", transaction.packet.getSequenceNumber(), msg, transaction)
+                    msg = f"Timeout! Retrying packet to {transaction.destination} (Attempt {transaction.retries}/{PeerMiddleware.MAX_RETRIES})"
+                    utils.log_message(self.log_file, "SYSTEM", "RETRY", transaction.packet.getSequenceNumber(), msg, transaction)
 
                     # Queue for sending
                     self.outboundPacketQueue.put(transaction)
@@ -136,6 +139,33 @@ class PeerMiddleware:
         while self.running:
             try:
                 transaction = self.outboundPacketQueue.get(timeout=1.0)
+
+                if not transaction.transactionType == TransactionType.ACK:
+                    foundFlag = False
+                    for action in self.transactionList[:]:
+                        if action.destination == transaction.destination:
+                            self.outboundPacketQueue.put(transaction)
+                            foundFlag = True
+                    if foundFlag:
+                        continue
+
+                if transaction.transactionType == TransactionType.DATA or transaction.transactionType == TransactionType.RELAY:
+                    element = SentPacketElement(senderID=transaction.packet.getSenderID(),
+                                                      sequenceNumber=transaction.packet.getSequenceNumber(),
+                                                      counter=len(self.peers) - 1 if transaction.transactionType == TransactionType.DATA else len(self.peers) - 3, # -1, because the first will be sent rn if it is new. and relay does not self send and send to sender
+                                                      timestamp=time.time())
+                    existing_element = next((item for item in self.sentPacketList if item == element), None)
+                    if existing_element:
+                        if (time.time() - existing_element.timestamp) < PeerMiddleware.WAIT_BETWEEN_SENDS:
+                            self.outboundPacketQueue.put(transaction)
+                            continue
+                        else:
+                            existing_element.counter = existing_element.counter - 1
+                            existing_element.timestamp = time.time()
+                            if existing_element.counter == 0:
+                                self.sentPacketList.remove(existing_element)
+                    else:
+                        self.sentPacketList.append(element)
 
                 # Convert packet to bytes (checksum calculated here)
                 data_bytes = transaction.packet.to_bytes()
@@ -192,6 +222,8 @@ class PeerMiddleware:
                 # Remove from transaction list
                 for transaction in self.transactionList[:]:
                     if transaction.destination == addr and transaction.packet.sequence_number == packet.getSequenceNumber():
+                        utils.log_message(self.log_file, packet.getSenderID(), "REMOVED", packet.getSequenceNumber(),
+                                          f"dropped transaction", transaction)
                         # Batch Success
                         if transaction.batch_id and transaction.batch_id in self.active_batches:
                              self.active_batches[transaction.batch_id]['success'] += 1
@@ -205,15 +237,15 @@ class PeerMiddleware:
                 if not relayElement in self.relayPacketList:
                     self.relayPacketList.append(relayElement)
 
-                    # Prepare for ack send
-                    transaction = Transaction(packet=Packet().setAck().setSequenceNumber(packet.getSequenceNumber()), transactionType=TransactionType.ACK, destination=addr)
-                    self.preProcessingQueue.put(transaction)
-
                     transaction = Transaction(packet=packet, transactionType=TransactionType.RELAY, destination=addr)
                     self.preProcessingQueue.put(transaction)
 
                     # Deliver to Application
                     self.deliveryQueue.put(DeliveryPacket(data=packet, type=DeliveryPacketType.PACKET))
+
+                # Prepare for ack send
+                transaction = Transaction(packet=Packet().setAck().setSequenceNumber(packet.getSequenceNumber()), transactionType=TransactionType.ACK, destination=addr)
+                self.preProcessingQueue.put(transaction)
 
             utils.log_message(self.log_file, packet.getSenderID(), "RECEIVE", packet.getSequenceNumber(),
                               f"Received packet from addr {addr}", packet)
@@ -231,8 +263,7 @@ class PeerMiddleware:
                     else:
                         # Max retries reached
                         msg = f"Message to {transaction.destination} failed after {PeerMiddleware.MAX_RETRIES} attempts."
-                        if self.log_file:
-                             utils.log_message(self.log_file, "SYSTEM", "DROP", transaction.packet.getSequenceNumber(), msg, transaction)
+                        utils.log_message(self.log_file, "SYSTEM", "DROP", transaction.packet.getSequenceNumber(), msg, transaction)
 
                         # Batch Fail
                         if transaction.batch_id and transaction.batch_id in self.active_batches:
