@@ -7,28 +7,22 @@ from PacketType import PacketType
 
 @dataclass
 class Packet:
-    # definition of struct
     # B=unsigned char, I=unsigned int, H=unsigned short
     # ! = Network Endian, B=unsigned char, I=unsigned int, H=unsigned short
 
-    """
-        Represents a packet in the Reliable Group Communication protocol.
+    # [ Fixed Header (8 bytes) ] [ Variable Header (SenderID) ] [ Payload ]
 
-        Structure:
-        [ Fixed Header (8 bytes) ] [ Variable Header (SenderID) ] [ Payload ]
+    # Fixed Header Format (!BIHB):
+    #    - PacketType (1 byte, unsigned char): 0=ACK, 1=DATA
+    #    - SequenceNumber (4 bytes, unsigned int)
+    #    - Checksum (2 bytes, unsigned short): Covers the entire packet (Header + SenderID + Payload)
+    #    - SenderID Length (1 byte, unsigned char): Length of the following SenderID in bytes
 
-        Fixed Header Format (!BIHB):
-        - PacketType (1 byte, unsigned char): 0=ACK, 1=DATA
-        - SequenceNumber (4 bytes, unsigned int)
-        - Checksum (2 bytes, unsigned short): Covers the entire packet (Header + SenderID + Payload)
-        - SenderID Length (1 byte, unsigned char): Length of the following SenderID in bytes
+    #    Variable Header:
+    #    - SenderID (Variable length, encoded as UTF-8 bytes): Not part of the fixed header struct.
 
-        Variable Header:
-        - SenderID (Variable length, encoded as UTF-8 bytes): Not part of the fixed header struct.
-
-        Payload:
-        - Variable length bytes: The actual message content.
-    """
+    #    Payload:
+    #    - Variable length bytes: The actual message content.
 
     HEADER_FORMAT: ClassVar[str] = "!BIHB"
     HEADER_SIZE: ClassVar[int] = struct.calcsize(HEADER_FORMAT)
@@ -96,17 +90,11 @@ class Packet:
     def getSequenceNumber(self):
         return self.sequence_number
 
-    def to_bytes(self):
-        """
-        Converts the object into a byte array and automatically 
-        calculates the RFC 1071 checksum.
-        """
-        
+    def to_bytes(self):        
         sid_bytes = self.sender_id.encode('utf-8')
         # check that payload is bytes
         p_bytes = self.payload.encode('utf-8') if isinstance(self.payload, str) else self.payload
 
-        # set checksum to 0 for calc
         self.checksum = 0
         
         # temp paket (header with checksum 0 + remainer)
@@ -116,20 +104,15 @@ class Packet:
         # calc checksum an store in object
         self.checksum = cs.internet_checksum(temp_packet)
         
-        # return final paket with set checksum
         return self.getHeaderStruct() + sid_bytes + p_bytes
 
     @classmethod
     def from_bytes(cls, data_bytes):
-        """
-        Converts bytes back into an object (deserialization).
-        """
-        # 1. Check if enough data for header
+        # Check if enough data for header
         if len(data_bytes) < cls.HEADER_SIZE:
             raise ValueError("Packet too short (Header missing)")
 
-        # 2. unpackt header (first 8 bytes)
-        # unpack returns tuple: (Type, SeqNum, Checksum, ID_Len)
+        # unpackt header (first 8 bytes)
         header_values = struct.unpack(cls.HEADER_FORMAT, data_bytes[: cls.HEADER_SIZE])
 
         p_type = PacketType(header_values[0])
@@ -137,16 +120,15 @@ class Packet:
         received_checksum = header_values[2]
         sid_len: int = header_values[3]
 
-        # 3. Check: if remaining data is enough for SenderID?
+        # Check if remaining data is enough for SenderID?
         if len(data_bytes) < cls.HEADER_SIZE + sid_len:
             raise ValueError("Packet too short (SenderID missing)")
 
-        # 4. Slicing the transmitter ID and payload
-        # ID start is directly after header
+        # Slicing the transmitter ID and payload
         sid_start: int = cls.HEADER_SIZE
         sid_end: int = sid_start + sid_len
 
-        # 5. create new object
+        # create new object
         packet = Packet().setChecksum(received_checksum).setSenderID(data_bytes[sid_start:sid_end]).setSequenceNumber(seq_num)
         if p_type == PacketType.ACK:
             packet.setAck()

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 from packet import Packet
 from TransactionType import TransactionType
 

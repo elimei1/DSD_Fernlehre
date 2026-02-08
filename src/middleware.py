@@ -1,15 +1,15 @@
 import socket
 import time
 import queue
-from copy import deepcopy
+import checksum as cs
+import utils as utils
 
+from copy import deepcopy
 from ThreadHandler import ThreadHandler
 from packet import Packet
 from SeqNumGenerator import SeqNumGenerator
 from Transaction import Transaction
-import checksum as cs
 from error_injection import inject_error
-import utils as utils
 from PacketType import PacketType
 from TransactionType import TransactionType
 from DeliveryPacketType import DeliveryPacketType
@@ -58,7 +58,6 @@ class PeerMiddleware:
         self.threadhandler.shutdown()
 
     def send_chat_message(self, text):
-        """Called by TUI to send a message to all peers."""
         # Create packet object
         pkt = Packet()
         pkt.setPayload(text)
@@ -124,9 +123,6 @@ class PeerMiddleware:
                 continue
 
     def receiver_thread(self):
-        """
-        Receives UDP packets, validates checksums, handles error injection.
-        """
         while self.running:
             try:
                 data, addr = self.sock.recvfrom(PeerMiddleware.RECV_BYTES)
@@ -142,11 +138,11 @@ class PeerMiddleware:
             if self.error_config:
                 self.inject_error(data)
 
-            # --- Checksum Validation ---
+            # Checksum Validation
             if not cs.validate_checksum(data):
                 # Checksum failed
                 msg = f"Checksum Mismatch! Discarding packet from {addr}."
-                # print(msg) # Keeping console clean
+                # print(msg)
                 if self.log_file:
                     utils.log_message(self.log_file, "SYSTEM", "DROP", msg)
                 self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE)) # Notify TUI
@@ -181,10 +177,10 @@ class PeerMiddleware:
                 transaction = Transaction(packet=Packet().setAck().setSequenceNumber(packet.getSequenceNumber()), transactionType=TransactionType.ACK, destination=addr)
                 self.preProcessingQueue.put(transaction)
 
-                # 2. Deliver to Application (TUI)
+                # Deliver to Application
                 self.deliveryQueue.put(DeliveryPacket(data=packet, type=DeliveryPacketType.PACKET))
                 
-                # 3. Log it
+                # Log it
                 if self.log_file:
                     utils.log_message(self.log_file, packet.sender_id, packet.sequence_number, packet.payload)
 

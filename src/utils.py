@@ -1,8 +1,7 @@
 def load_peer_config(filepath):
-    """
-    Format: ID IP PORT
-    Example: 1 127.0.0.1 5001
-    """
+    # Format: ID IP PORT
+    # Example: 1 172.20.0.11 5001
+
     peers = {}
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -27,9 +26,7 @@ def load_peer_config(filepath):
 import datetime
 
 def log_message(filepath, sender_id, msg_id, payload):
-    """
-    Saves received messages to a file[cite: 43].
-    """
+    # Saves received messages to a file[cite: 43]
     try:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] [Peer {sender_id}] [MsgID {msg_id}] {payload}\n"
