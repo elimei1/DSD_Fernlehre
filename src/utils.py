@@ -12,7 +12,7 @@ def load_peer_config(filepath):
                 parts = line.split()
                 if len(parts) >= 3:
                     try:
-                        peer_id = int(parts[0])
+                        peer_id = parts[0]
                         peer_ip = parts[1]
                         peer_port = int(parts[2])
                         peers[peer_id] = [peer_ip, peer_port]

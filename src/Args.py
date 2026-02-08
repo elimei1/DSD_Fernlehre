@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 class Args:
     _instance = None
 
-    peerID: int = -1
+    peerID: str = -1
     port: int = -1
     peers: dict = field(default_factory=dict)
     log: str = ""

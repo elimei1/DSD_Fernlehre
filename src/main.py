@@ -10,7 +10,7 @@ from utils import load_peer_config
 def main():
     # Argument Parsing
     parser = argparse.ArgumentParser(description="P2P Chat with Error Injection")
-    parser.add_argument("--id", type=int, required=False, help="Peer ID")
+    parser.add_argument("--id", type=str, required=False, help="Peer ID")
     parser.add_argument("--port", type=int, required=False, help="Own Port")
     parser.add_argument("--peers", type=str, required=False, help="Path to config file")
     parser.add_argument("--log", type=str, required=False, help="Path to log file")
@@ -36,7 +36,7 @@ def main():
 
         try:
             arguments = Args()
-            arguments.peerID = int(args.id)
+            arguments.peerID = args.id
             arguments.port = int(args.port)
             arguments.peers = utils.load_peer_config(args.peers)
             arguments.log = args.log
