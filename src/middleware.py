@@ -294,7 +294,7 @@ class PeerMiddleware:
         utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", packet.getSequenceNumber(), msg, packet)
         if str(packet.getSenderID()) + str(packet.getSequenceNumber()) == target_msg_id:
             # Identify Packet Type (Byte 0)
-            msg = f"Simulating Bit-Flip on packet with sequence number {target_msg_id} at bit {bit_idx}"
+            msg = f"Simulating Bit-Flip on packet with message ID {target_msg_id} at bit {bit_idx}"
             utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", packet.getSequenceNumber(), msg, packet)
             self.deliveryQueue.put(DeliveryPacket(data=msg, type=DeliveryPacketType.SYSTEM_MESSAGE))  # Notify TUI
 
