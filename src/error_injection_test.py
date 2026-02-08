@@ -15,7 +15,7 @@ def run_test():
     # --- 2. create packet ---
     p = (
         Packet()
-        .setSenderID("Tristan")
+        .setSenderID("test")
         .setSequenceNumber(target_id)
         .setPayload("Hello Reliability!")
     )
