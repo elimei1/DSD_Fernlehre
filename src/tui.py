@@ -176,7 +176,7 @@ class PeerTUI:
                 self.add_system_message("Error injection set to MSG_ID=2, BIT_IDX=2")
             elif len(parts) == 3:
                 try:
-                    msg_id = int(parts[1])
+                    msg_id = parts[1]
                     bit_idx = int(parts[2])
                     self.mw.setErrorInjectionConfig((msg_id, bit_idx))
                     self.add_system_message(f"Error injection set to MSG_ID={msg_id}, BIT_IDX={bit_idx}")

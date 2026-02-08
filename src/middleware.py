@@ -222,8 +222,7 @@ class PeerMiddleware:
                 # Remove from transaction list
                 for transaction in self.transactionList[:]:
                     if transaction.destination == addr and transaction.packet.sequence_number == packet.getSequenceNumber():
-                        utils.log_message(self.log_file, packet.getSenderID(), "REMOVED", packet.getSequenceNumber(),
-                                          f"dropped transaction", transaction)
+
                         # Batch Success
                         if transaction.batch_id and transaction.batch_id in self.active_batches:
                              self.active_batches[transaction.batch_id]['success'] += 1
@@ -292,7 +291,7 @@ class PeerMiddleware:
         target_msg_id, bit_idx = self.injected_errors
         packet = Packet.from_bytes(data)
 
-        if packet.getSequenceNumber() == target_msg_id:
+        if str(packet.getSenderID) + str(packet.getSequenceNumber()) == target_msg_id:
             # Identify Packet Type (Byte 0)
             msg = f"Simulating Bit-Flip on packet with sequence number {target_msg_id} at bit {bit_idx}"
             utils.log_message(self.log_file, "SYSTEM", "ERR-INJECT", packet.getSequenceNumber(), msg, packet)
