@@ -267,13 +267,12 @@ class PeerTUI:
              
              # Peer ID
              ''' Unique Peer-ID per Peer over setup config'''
-             while True:
-                 if self.args.peerID:
-                    str_id = self.read_line(f"Current Peer ID is {self.args.peerID}. Enter new Peer ID (leave empty to keep current): ")
-                    if str_id == "":
-                        break
-                 else:
-                     str_id = self.read_line(f"Enter Peer ID: ")
+             if self.args.peerID:
+                str_id = self.read_line(f"Current Peer ID is {self.args.peerID}. Enter new Peer ID (leave empty to keep current): ")
+                if not str_id == "":
+                    self.args.peerID = str_id
+             else:
+                 self.args.peerID = self.read_line(f"Enter Peer ID: ")
              
              # Port
              while True:
